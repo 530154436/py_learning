@@ -1,0 +1,61 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>DeepQA: A Chatbot</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}">
+		<!--[if lte IE 8]><script src="static/assets/js/html5shiv.js"></script><![endif]-->
+		<link rel="stylesheet" href="{{ url_for('static', filename='assets/css/main.css') }}" />
+		<!--[if lte IE 9]><link rel="stylesheet" href="{{ url_for('static', filename='assets/css/ie9.css') }}" /><![endif]-->
+		<!--[if lte IE 8]><link rel="stylesheet" href="{{ url_for('static', filename='assets/css/ie8.css') }}" /><![endif]-->
+		<noscript><link rel="stylesheet" href="{{ url_for('static', filename='assets/css/noscript.css') }}" /></noscript>
+	</head>
+	<body class="is-loading">
+
+		<!-- Wrapper -->
+			<div id="wrapper">
+
+				<!-- Main -->
+					<section id="main">
+						<header>
+							<span class="avatar"><img src="{{ url_for('static', filename='images/avatar.jpg') }}" alt="" /></span>
+							<h1>Hi, I am Siri. </h1>
+							<p>Welcome to BJU-Movie-QA</p>
+						</header>
+
+						<form id="chat_form">
+							<div class="field">
+								<input type="text" name="name" id="message" placeholder="Say something..." />
+								<!--<a href="#" class="button">Go</a>-->
+								<!--<button type="submit" id="go">Say it</button>-->
+								</div>
+							<!--<div class="field">
+								<textarea name="message" id="message" placeholder="Message" rows="4"></textarea>
+							</div>-->
+						</form>
+
+						<div id="chat_zone"></div>
+
+						<hr />
+
+					</section>
+
+
+			</div>
+
+		<!-- Scripts -->
+			<!--[if lte IE 8]><script src="{{ url_for('static', filename='assets/js/respond.min.js') }}"></script><![endif]-->
+			<script>
+				if ('addEventListener' in window) {
+					window.addEventListener('load', function() { document.body.className = document.body.className.replace(/\bis-loading\b/, ''); });
+					document.body.className += (navigator.userAgent.match(/(MSIE|rv:11\.0)/) ? ' is-ie' : '');
+				}
+			</script>
+
+            <script type="text/javascript" src='{{ url_for("static", filename="js/jquery-3.1.0.min.js") }}'></script>
+            <script type="text/javascript" src='{{ url_for("static", filename="js/reconnecting-websocket.js") }}'></script>
+            <script type="text/javascript" src='{{ url_for("static", filename="js/chat.js") }}'></script>
+
+	</body>
+</html>

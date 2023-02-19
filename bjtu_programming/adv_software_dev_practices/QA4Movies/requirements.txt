@@ -1,0 +1,10 @@
+Flask==1.0.3
+jieba==0.42.1
+scikit-learn==0.20.4
+pandas==1.0.3
+neo4j==4.1.0
+xlrd==1.1.0
+Flask-Sockets==0.2.1
+Werkzeug==1.0.0
+websocket_client==1.2.1
+requests==2.26.0
