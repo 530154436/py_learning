@@ -1,0 +1,49 @@
+<head>
+    <link rel="stylesheet" href="{{ url_for('static',filename='bower_components/bootstrap/dist/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='bower_components/bootstrap-table/dist/bootstrap-table.css') }}">
+</head>
+
+<body>
+    <script src="{{ url_for('static',filename='bower_components/jquery/dist/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='bower_components/bootstrap/dist/js/bootstrap.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='bower_components/bootstrap-table/dist/bootstrap-table.js') }}"></script>
+    <script src="{{ url_for('static', filename='bower_components/bootstrap-table/dist/locale/bootstrap-table-zh-CN.js') }}"></script>
+
+    <script type="text/javascript">
+        function send_ajax() {
+            const options = {
+                url: "/table-data",
+                type: "POST",
+                async: false,
+                data: {},
+                cache: false,//不缓存数据
+                processData: false,//不转换数据
+                contentType: false,
+                dataType: "json",
+                success: successCallback,
+                error: errorCallback
+            };
+            $.ajax(options);
+        }
+
+        function successCallback(rsp) {
+            var jsonStr = JSON.stringify(rsp);
+            alert(jsonStr);
+
+            $('#table_sg').bootstrapTable('destroy');
+            $('#table_sg').bootstrapTable({
+                columns: rsp.columns,
+                data: rsp.rows
+            });
+        }
+
+        function errorCallback(xhr, status) {
+            alert('出问题了！');
+        }
+    </script>
+
+    <input type="submit" class="btn btn-primary" value="提交" onclick="send_ajax()">
+    <div class="div-right">
+        <table id="table_sg">返回数据</table>
+    </div>
+</body>

@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.csv
+*.xlsx
 
 # C extensions
 *.so
@@ -14,7 +15,6 @@ github/
 .ipynb_checkpoints/
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/

@@ -1,0 +1,168 @@
+<head>
+    <style>
+        .tbl-td-class {
+            width: 130px
+        }
+
+        .input_text_class {
+            width: 220px
+        }
+
+        .input_num_class {
+            width: 80px
+        }
+    </style>
+</head>
+
+<body>
+<script src="{{ url_for('static',filename='bower_components/jquery/dist/jquery.min.js') }}"></script>
+<script type="text/javascript">
+    // 全局变量
+    var new_row_num = 0;
+
+    // 动态删除行
+    function delRow(obj) {
+        if (new_row_num > 0) {
+            obj.parentNode.parentNode.remove();
+            new_row_num--;
+        }
+    }
+
+    // 动态新增行
+    function addNewRow() {
+        if (new_row_num >= 5) {
+            return alert('输入列表框超过5个了')
+        }
+        const prefix = "tr_has_input_gene_list"
+        const new_row_id = prefix + (new_row_num + 1)
+        $("#" + prefix + new_row_num).after(
+            "<tr id=" + new_row_id + ">" +
+            "<td></td>" +
+            "<td>" +
+            "<input type='text' name='input_gene_list' class='input_text_class'>&nbsp;" +
+            "<input type='button' value='-' onclick='delRow(this)'>" +
+            "</td>" +
+            "</tr>"
+        );
+        new_row_num++;
+    }
+
+    // 单选
+    function radio_select_gene() {
+        const item = $("input[name=has_input_gene_list]:checked").val();
+        const tr = document.getElementById("tr_has_input_gene_list0");
+        if (item === "0") {
+            tr.innerHTML = '<td></td>' +
+                '<td><input type="file" name="input_file" accept=".txt,.csv,.xlsx"></td>'
+
+            // 删除输入框
+            for (; new_row_num > 0; new_row_num--) {
+                const new_row_id = "tr_has_input_gene_list" + new_row_num;
+                document.getElementById(new_row_id).remove();
+            }
+        } else {
+            tr.innerHTML = '<td><label>请输入基因列</label></td> ' +
+                '<td>' +
+                '<input type="text" name="input_gene_list" class="input_text_class">&nbsp;' +
+                '<input type="button" value="+" onclick="addNewRow()">' +
+                '</td>';
+        }
+    }
+
+    function bnl_select() {
+        const item = $("input[name=has_bnl]:checked").val();
+        if (item === "yes") {
+            $("#tr_has_bnl").after(
+                '<tr id="tr_bnl_random_num">' +
+                '<td>请输入随机次数</td>' +
+                '<td><input type="number" id="bnl_random_num" name="bnl_random_num"></td>' +
+                '</tr>'
+            );
+        } else {
+            document.getElementById('tr_bnl_random_num').remove();
+        }
+    }
+
+    function send_ajax() {
+        var formData = new FormData($("#upForm")[0]);
+        const options = {
+            url: "/ajax-submit-form",
+            type: "POST",
+            async: false,
+            data: formData,
+            cache: false,//不缓存数据
+            processData: false,//不转换数据
+            contentType: false,
+            dataType: "json"
+        };
+        $.ajax(options);
+    }
+</script>
+
+<div>
+    <form id="upForm" enctype="multipart/form-data" class="form-horizontal" onsubmit="return false">
+        <div class="div-left">
+            <table id="tbl" style="border-collapse:separate; border-spacing:0px 3px;">
+                <tr>
+                    <td class='tbl-td-class'>
+                        <label>选择输入方式</label>
+                    </td>
+                    <td>
+                        <input type="radio" name="has_input_gene_list" value="1" onclick="radio_select_gene()" checked>填写基因列
+                        <input type="radio" name="has_input_gene_list" value="0" onclick="radio_select_gene()">上传文件
+                    </td>
+                </tr>
+                <tr id="tr_has_input_gene_list0">
+                    <td>
+                        <label>请输入基因列</label>
+                    </td>
+                    <td>
+                        <input type="text" name="input_gene_list" class="input_text_class">
+                        <input type="button" value="+" onclick="addNewRow()">
+                    </td>
+                </tr>
+                <tr>
+                    <td id="td1">
+                        <label for="input_ppi">ppi分值</label>
+                    </td>
+                    <td>
+                        <input type="number" id="input_ppi" name="input_ppi" class="input_num_class">
+                    </td>
+                </tr>
+                <tr id="tr_has_bnl">
+                    <td>
+                        <label>伯努利检验</label>
+                    </td>
+                    <td>
+                        <input type="radio" name="has_bnl" value="yes" onclick="bnl_select()" checked>Yes
+                        <input type="radio" name="has_bnl" value="no" onclick="bnl_select()">No
+                    </td>
+                </tr>
+                <tr id="tr_bnl_random_num">
+                    <td>
+                        请输入随机次数
+                    </td>
+                    <td>
+                        <input type="number" id="bnl_random_num" name="bnl_random_num" class="input_num_class">
+                    </td>
+                </tr>
+                <tr>
+                    <td id>
+                        <label>数据库相关</label>
+                    </td>
+                    <td>
+                        <input type="checkbox" name="ppi_db" checked value="String_v11_5"> String_v11_5
+                        <input type="checkbox" name="ppi_db" value="BioGRID"> BioGRID
+                        <input type="checkbox" name="ppi_db" value="HI_union"> HI_union
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="div1">
+            <input type="submit" class="btn btn-primary" value="提交" onclick="send_ajax()">
+            <input type="reset" class="btn btn-default" value="重置选项">
+        </div>
+    </form>
+</div>
+
+</body>
