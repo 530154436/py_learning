@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*--
-from pipes import quote
-
-import pandas as pd
 import io
+import pandas as pd
+from pipes import quote
 from flask import make_response, send_from_directory
 from pathlib import Path
 

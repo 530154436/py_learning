@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*--
 from flask import Flask
-from Web.FlaskWeb.views import bootstrap_table
-from Web.FlaskWeb.views import form
+from framework.web_flask.views import bootstrap_table
+from framework.web_flask.views import form
 
 
 app = Flask(__name__, template_folder="templates", static_folder="static")  # 创建应用

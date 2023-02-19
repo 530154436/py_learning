@@ -2,9 +2,9 @@
 # -*- coding:utf-8 -*--
 from flask import Blueprint, render_template, jsonify, request
 
-from Web.FlaskWeb import BASE_DIR
-from Web.FlaskWeb.controllers.downloader import ExcelDownloader
-from Web.FlaskWeb.data.table_data import boostrap_table_data
+from framework.web_flask import BASE_DIR
+from framework.web_flask.controllers.downloader import ExcelDownloader
+from framework.web_flask.data.table_data import boostrap_table_data
 
 blueprint = Blueprint('bootstrap_table', __name__)
 

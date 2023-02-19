@@ -4,7 +4,7 @@ import uuid
 
 import pandas as pd
 
-from Web.FlaskWeb import BASE_DIR
+from framework.web_flask import BASE_DIR
 
 total = 20
 column_num = 3
