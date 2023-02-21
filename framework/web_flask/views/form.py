@@ -5,12 +5,11 @@ from framework.web_flask.controllers.single_gene_handler import SingleGeneHandle
 
 blueprint = Blueprint('form', __name__)
 
-sg_handler = SingleGeneHandler()
-
 
 @blueprint.route('/ajax-submit-form', methods=["POST"])
 def ajax_submit_form():
     if request.method == 'POST':
+        sg_handler = SingleGeneHandler()
         sg_handler.parse_form(request)
         print(sg_handler.json())
         return jsonify(sg_handler.json())
