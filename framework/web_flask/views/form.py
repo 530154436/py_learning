@@ -11,9 +11,9 @@ sg_handler = SingleGeneHandler()
 @blueprint.route('/ajax-submit-form', methods=["POST"])
 def ajax_submit_form():
     if request.method == 'POST':
-        params: dict = sg_handler.parse_form(request.form)
-        print(params)
-        return jsonify(params)
+        sg_handler.parse_form(request)
+        print(sg_handler.json())
+        return jsonify(sg_handler.json())
 
 
 @blueprint.route('/ajax-form')
