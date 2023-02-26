@@ -113,6 +113,9 @@
         });
         alert(jsonStr);
 
+        let node = document.getElementById("toolbar");
+        node.style.display = 'block';
+
         $('#table_sg').bootstrapTable('destroy');
         $('#table_sg').bootstrapTable({
             columns: columns,
@@ -133,7 +136,7 @@
             height: 550, //固定表格的高度
             // rowStyle: rowStyle,//通过自定义函数设置行样式
             // smartDisplay: true,  // 自动根据网页容器高度计算出pageSize和pageList的值你无需设置这两个值。
-            showFullscreen:true, //显示全屏按钮
+            // showFullscreen:true, //显示全屏按钮
 
             //是否导出数据
             showExport: true,
@@ -160,6 +163,14 @@
 
 <input type="submit" class="btn btn-primary" value="提交" onclick="send_ajax()">
 <div style="width: 80%; margin: 0 auto">
-    <table id="table_sg">返回数据</table>
+
+    <div>
+        <div class="row" id="toolbar" style="display: none">
+            <div class="col-sm-3">
+                <button class="btn btn-info" id="btn_download">下载网络信息</button>
+            </div>
+        </div>
+        <table id="table_sg"></table>
+    </div>
 </div>
 </body>
