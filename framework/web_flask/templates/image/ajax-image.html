@@ -1,0 +1,58 @@
+<head>
+</head>
+
+<body>
+<script src="{{ url_for('static',filename='bower_components/jquery/dist/jquery.min.js') }}"></script>
+<script type="text/javascript">
+    function send_ajax() {
+        var formData = new FormData($("#upForm")[0]);
+        const options = {
+            url: "/ajax-upload-image",
+            type: "POST",
+            async: false,
+            data: formData,
+            cache: false,//不缓存数据
+            processData: false,//不转换数据
+            contentType: false,
+            success: successCallback,
+            error: errorCallback,
+            dataType: "json",
+        };
+        $.ajax(options);
+    }
+    function successCallback(rsp) {
+            let jsonStr = JSON.stringify(rsp);
+            // alert(jsonStr);
+            // console.log(rsp.base64)
+
+            let img_div = document.getElementById("img_venn");
+            img_div.innerHTML = '<p><img width="500" height="500" src="data:;base64,'+ rsp.base64 +'"></p>'
+        }
+
+        function errorCallback(xhr, status) {
+            alert('出问题了！');
+        }
+
+        function completeCallback(xhr, status) {
+            alert('Ajax请求已结束。');
+        }
+</script>
+
+<div>
+        <form id="upForm" enctype="multipart/form-data" class="form-horizontal" onsubmit="return false">
+        <div class="div-left">
+            <table id="tbl" style="border-collapse:separate; border-spacing:0px 3px;">
+                <tr id="input_image">
+                    <td><input type="file" name="input_file" accept=".jpg"></td>
+                </tr>
+            </table>
+        </div>
+        <div class="div1">
+            <input type="submit" class="btn btn-primary" value="提交" onclick="send_ajax()">
+            <input type="reset" class="btn btn-default" value="重置选项">
+        </div>
+    </form>
+    <div class="img_venn" id="img_venn"></div>
+</div>
+
+</body>

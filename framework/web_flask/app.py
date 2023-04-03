@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*--
 from flask import Flask
-from framework.web_flask.views import bootstrap_table
+from framework.web_flask.views import bootstrap_table, image
 from framework.web_flask.views import form
 
 
@@ -10,6 +10,7 @@ app = Flask(__name__, template_folder="templates", static_folder="static")  # åˆ
 blueprints = [
     bootstrap_table.blueprint,
     form.blueprint,
+    image.blueprint,
 ]
 for blueprint in blueprints:
     app.register_blueprint(blueprint)
