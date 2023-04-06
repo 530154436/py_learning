@@ -57,7 +57,10 @@
         const tr = document.getElementById("tr_has_input_gene_list0");
         if (item === "0") {
             tr.innerHTML = '<td></td>' +
-                '<td><input type="file" name="input_file" accept=".txt,.csv,.xlsx"></td>'
+                '<td>' +
+                '<a id="btn_download" style="width:150px;overflow:hidden" href="javascript:void()">示例文件下载</a>&nbsp&nbsp' +
+                '<input type="file" name="input_file" accept=".txt,.csv,.xlsx">' +
+                '</td>'
 
             // 删除输入框
             for (; new_row_num > 0; new_row_num--) {
