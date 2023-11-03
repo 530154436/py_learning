@@ -1,0 +1,5 @@
+PyMySQL==0.10.1
+SQLAlchemy==1.3.20
+matplotlib-venn==0.11.9
+importlib_metadata==4.13.0
+celery==5.2.0
