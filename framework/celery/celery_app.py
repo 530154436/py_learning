@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*--
-# celery==5.2.0
-# importlib_metadata==4.13.0
 import json
+import logging
 from celery import Celery
 from kombu.serialization import register
-from framework.celery import celeryconfig
-from framework.celery.task import add
+from celery_framework import celeryconfig
+from celery_framework.callbacks import CallbackTask
+from celery_framework.task import add, update_state
+
+
+# 字体有问题
+logging.getLogger('matplotlib.font_manager').disabled = True
 
 CELERY_APP = Celery('tasks')
 CELERY_APP.config_from_object(celeryconfig)
@@ -16,7 +20,10 @@ register('json', lambda v: json.dumps(v), lambda v: json.loads(v),
          content_type='application/json', content_encoding='utf-8')
 
 # 加载异步任务
-add_async = CELERY_APP.task(add, name=add.__name__)
+add_async = CELERY_APP.task(add, name=add.__name__, base=CallbackTask)
+update_state_async = CELERY_APP.task(update_state, name=update_state.__name__, base=CallbackTask, bind=True)
+# report_controller_creat_async = CELERY_APP.task(ReportController.create,
+#                                                 name=ReportController.create.__name__)
 
 
 if __name__ == "__main__":
