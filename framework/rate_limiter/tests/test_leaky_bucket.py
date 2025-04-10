@@ -7,7 +7,7 @@ import time
 import unittest
 import threading
 from queue import Queue
-from framework.rate_limiter.leaky_bucket import LeakyBucket
+from framework.rate_limiter.algorithm.leaky_bucket import LeakyBucket
 
 
 class TestLeakyBucket(unittest.TestCase):

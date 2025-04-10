@@ -7,7 +7,7 @@ import unittest
 from queue import Queue
 from threading import Thread
 from unittest.mock import patch
-from framework.rate_limiter.token_bucket import IntervalRefillTokenBucket
+from framework.rate_limiter.algorithm.token_bucket import IntervalRefillTokenBucket
 
 
 class TestFixedTokenBucket(unittest.TestCase):

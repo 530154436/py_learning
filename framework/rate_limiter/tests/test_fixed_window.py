@@ -7,7 +7,7 @@ import time
 import unittest
 import threading
 from queue import Queue
-from framework.rate_limiter.fixed_window import FixedWindow
+from framework.rate_limiter.algorithm.fixed_window import FixedWindow
 
 
 class TestFixedWindow(unittest.TestCase):

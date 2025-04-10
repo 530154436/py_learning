@@ -9,7 +9,7 @@ import unittest
 import threading
 from queue import Queue
 from unittest.mock import patch
-from framework.rate_limiter.sliding_window import SlidingWindow
+from framework.rate_limiter.algorithm.sliding_window import SlidingWindow
 
 
 class TestSlidingWindow(unittest.TestCase):

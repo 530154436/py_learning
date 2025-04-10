@@ -7,7 +7,7 @@ import time
 import unittest
 import threading
 from queue import Queue
-from framework.rate_limiter.token_bucket import TokenBucket
+from framework.rate_limiter.algorithm.token_bucket import TokenBucket
 
 
 class TestTokenBucket(unittest.TestCase):
