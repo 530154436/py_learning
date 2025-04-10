@@ -1,3 +1,14 @@
+<nav>
+<a href="#一限流的基本概念">一、限流的基本概念</a><br/>
+<a href="#二限流算法">二、限流算法</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#21-固定窗口算法fixed-window">2.1 固定窗口算法（Fixed Window）</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#22-滑动窗口算法sliding-window">2.2 滑动窗口算法（Sliding Window）</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#23-令牌桶算法token-bucket">2.3 令牌桶算法（Token Bucket）</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#24-漏桶算法leaky-bucket">2.4 漏桶算法（Leaky Bucket）</a><br/>
+<a href="#三分布式限流基于-redis-实现">三、分布式限流：基于 Redis 实现</a><br/>
+<a href="#参考引用">参考引用</a><br/>
+</nav>
+
 
 ## 一、限流的基本概念
 在当今高速发展的互联网应用领域，面对高并发和海量流量的挑战，限流（Rate Limiting）技术显得尤为重要。它不仅能够有效防护系统免受突发流量的冲击，确保系统的稳定运行，同时也能保证资源得到公正合理的分配，从而提升用户体验。 限流，即是控制流量。具体到计算机系统中，它通常指对特定服务或资源在单位时间内所能接受的请求次数进行限制。以下是几种常见的限流算法：
