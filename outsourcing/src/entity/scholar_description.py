@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from typing import List
-
 import pandas as pd
 from pydantic import BaseModel
 from config import END_YEAR
@@ -10,31 +9,31 @@ class ScholarDescription(BaseModel):
     """
     学者描述性统计（综合报告附表1，领域报告表1-1、附表1)
     """
-    id: str                                             # 学者唯一ID
-    name: str                                           # 姓名
-    scholar_career_length: int                          # 学者职业生涯长度（2024-首篇论文发表年份+1）
-    scholar_active_years: int                           # 学者活跃年数（发表≥1篇论文的年份数）
-    scholar_career_total_wos_publications: int          # 学者职业生涯总发文量
-    scholar_h_index_before_5year: int                   # 2019年学者H指数（截止到2019年）
-    scholar_h_index_behind_5year: int                   # 学者H指数（截止到2024年）
-    scholar_10_years_total_publications: int            # 10年总发文量：不区分Document Type
-    scholar_10_years_total_sci_publications: int        # 10年SCI论文总发文量：统计Web of Science Index中的Science Citation Index Expanded (SCI-EXPANDED)，即SCI论文
-    scholar_10_years_total_meeting_publications: int    # 10年会议论文总发文量：统计Web of Science Index中的Conference Proceedings Citation Index - Science (CPCI-S)，即会议论文
-    scholar_10_years_total_preprint_publications: int   # 10年预印本总发文量：统计Web of Science Index中的preprint，即预印本
+    id: str                                     # 学者唯一ID
+    name: str                                   # 姓名
+    career_length: int                          # 学者职业生涯长度（2024-首篇论文发表年份+1）
+    active_years: int                           # 学者活跃年数（发表≥1篇论文的年份数）
+    career_total_wos_publications: int          # 学者职业生涯总发文量
+    h_index_before_5_years: int                   # 2019年学者H指数（截止到2019年）
+    h_index_behind_5_years: int                   # 学者H指数（截止到2024年）
+    total_publications_10_years: int            # 10年总发文量：不区分Document Type
+    total_sci_publications_10_years: int        # 10年SCI论文总发文量：统计Web of Science Index中的Science Citation Index Expanded (SCI-EXPANDED)，即SCI论文
+    total_meeting_publications_10_years: int    # 10年会议论文总发文量：统计Web of Science Index中的Conference Proceedings Citation Index - Science (CPCI-S)，即会议论文
+    total_preprint_publications_10_years: int   # 10年预印本总发文量：统计Web of Science Index中的preprint，即预印本
 
     # 中文字段名到英文属性名的映射
     __zh2en__ = {
         "学者唯一ID": "id",
         "姓名": "name",
-        '学者职业生涯长度': 'scholar_career_length',
-        '学者活跃年数': 'scholar_active_years',
-        '学者职业生涯总发文量': 'scholar_career_total_wos_publications',
-        f'{END_YEAR-5}年学者H指数（截止到{END_YEAR-5}年）': 'scholar_h_index_before_5year',
-        f'学者H指数（截止到{END_YEAR}年）': 'scholar_h_index_behind_5year',
-        '10年总发文量': 'scholar_10_years_total_publications',
-        '10年SCI论文总发文量': 'scholar_10_years_total_sci_publications',
-        '10年会议论文总发文量': 'scholar_10_years_total_meeting_publications',
-        '10年预印本总发文量': 'scholar_10_years_total_preprint_publications',
+        '学者职业生涯长度': 'career_length',
+        '学者活跃年数': 'active_years',
+        '学者职业生涯总发文量': 'career_total_wos_publications',
+        f'{END_YEAR-5}年学者H指数（截止到{END_YEAR-5}年）': 'h_index_before_5_years',
+        f'学者H指数（截止到{END_YEAR}年）': 'h_index_behind_5_years',
+        '10年总发文量': 'total_publications_10_years',
+        '10年SCI论文总发文量': 'total_sci_publications_10_years',
+        '10年会议论文总发文量': 'total_meeting_publications_10_years',
+        '10年预印本总发文量': 'total_preprint_publications_10_years',
     }
     # 英文属性名到中文字段名的映射（反向映射）
     __en2zh__ = {v: k for k, v in __zh2en__.items()}
@@ -75,61 +74,61 @@ class ScholarDescription(BaseModel):
 
         # 1、学者职业生涯长度：2024-首篇论文发表年份+1
         first_paper_year = df["Publication Year"].astype(int).min()
-        scholar_career_length = END_YEAR - int(first_paper_year) + 1
-        print("学者职业生涯长度:", scholar_career_length)
+        career_length = END_YEAR - int(first_paper_year) + 1
+        print("学者职业生涯长度:", career_length)
 
         # 2、学者活跃年数：发表≥1篇论文的年份数（TODO:截止2024年？）
-        scholar_active_years = df["Publication Year"].nunique()
-        print("学者活跃年数:", scholar_active_years)
+        active_years = df["Publication Year"].nunique()
+        print("学者活跃年数:", active_years)
 
         # 3、学者职业生涯总发文量：截止2024年发表论文总量
         df_sub = df[df["Publication Year"] <= END_YEAR]
-        scholar_career_total_wos_publications = df_sub["Publication Year"].count()
-        print("学者职业生涯总发文量:", scholar_career_total_wos_publications)
+        career_total_wos_publications = df_sub["Publication Year"].count()
+        print("学者职业生涯总发文量:", career_total_wos_publications)
 
         # 4、2019年学者H指数（截止到2019年）
         df_sub = df[df["Publication Year"] <= END_YEAR - 5]
-        scholar_h_index_before_5year = cls.calc_h_index(df_sub["Cited Reference Count"].tolist())
-        print(f"学者H指数：截止到{END_YEAR - 5}年:", scholar_h_index_before_5year)
+        h_index_before_5_years = cls.calc_h_index(df_sub["Cited Reference Count"].tolist())
+        print(f"学者H指数：截止到{END_YEAR - 5}年:", h_index_before_5_years)
 
         # 5、学者H指数：截止到2024年
         df_sub = df[df["Publication Year"] <= END_YEAR]
-        scholar_h_index_behind_5year = cls.calc_h_index(df_sub["Cited Reference Count"].tolist())
-        print(f"学者H指数：截止到{END_YEAR}年:", scholar_h_index_behind_5year)
+        h_index_behind_5_years = cls.calc_h_index(df_sub["Cited Reference Count"].tolist())
+        print(f"学者H指数：截止到{END_YEAR}年:", h_index_behind_5_years)
 
         # 6、10年总发文量：不区分Document Type
         mask_10_year = (END_YEAR - 5 <= df["Publication Year"]) & (df["Publication Year"] <= END_YEAR)
-        scholar_10_years_total_publications = df[mask_10_year]["Publication Year"].count()
-        print(f"10年总发文量（不区分Document Type）：", scholar_10_years_total_publications)
+        total_publications_10_years = df[mask_10_year]["Publication Year"].count()
+        print(f"10年总发文量（不区分Document Type）：", total_publications_10_years)
 
         # 7、10年SCI论文总发文量：统计Web of Science Index中的Science Citation Index Expanded (SCI-EXPANDED)，即SCI论文
         mask = mask_10_year \
             & (df["Web of Science Index"] == "Science Citation Index Expanded (SCI-EXPANDED)")
-        scholar_10_years_total_sci_publications = df[mask]["Publication Year"].count()
-        print(f"10年SCI论文总发文量:", scholar_10_years_total_sci_publications)
+        total_sci_publications_10_years = df[mask]["Publication Year"].count()
+        print(f"10年SCI论文总发文量:", total_sci_publications_10_years)
 
         # 8、10年会议论文总发文量：统计Web of Science Index中的Conference Proceedings Citation Index - Science (CPCI-S)，即会议论文
         mask = mask_10_year \
             & (df["Web of Science Index"] == "Conference Proceedings Citation Index - Science (CPCI-S)")
-        scholar_10_years_total_meeting_publications = df[mask]["Publication Year"].count()
-        print(f"10年会议论文总发文量:", scholar_10_years_total_meeting_publications)
+        total_meeting_publications_10_years = df[mask]["Publication Year"].count()
+        print(f"10年会议论文总发文量:", total_meeting_publications_10_years)
 
         # 9、10年预印本总发文量：统计Web of Science Index中的preprint，即预印本
         mask = mask_10_year \
             & (df["Web of Science Index"] == "preprint")
-        scholar_10_years_total_preprint_publications = df[mask]["Publication Year"].count()
-        print(f"10年预印本总发文量:", scholar_10_years_total_preprint_publications)
+        total_preprint_publications_10_years = df[mask]["Publication Year"].count()
+        print(f"10年预印本总发文量:", total_preprint_publications_10_years)
 
         return cls(
             id=_id,
             name=name,
-            scholar_career_length=scholar_career_length,
-            scholar_active_years=scholar_active_years,
-            scholar_career_total_wos_publications=scholar_career_total_wos_publications,
-            scholar_h_index_before_5year=scholar_h_index_before_5year,
-            scholar_h_index_behind_5year=scholar_h_index_behind_5year,
-            scholar_10_years_total_publications=scholar_10_years_total_publications,
-            scholar_10_years_total_sci_publications=scholar_10_years_total_sci_publications,
-            scholar_10_years_total_meeting_publications=scholar_10_years_total_meeting_publications,
-            scholar_10_years_total_preprint_publications=scholar_10_years_total_preprint_publications,
+            career_length=career_length,
+            active_years=active_years,
+            career_total_wos_publications=career_total_wos_publications,
+            h_index_before_5_years=h_index_before_5_years,
+            h_index_behind_5_years=h_index_behind_5_years,
+            total_publications_10_years=total_publications_10_years,
+            total_sci_publications_10_years=total_sci_publications_10_years,
+            total_meeting_publications_10_years=total_meeting_publications_10_years,
+            total_preprint_publications_10_years=total_preprint_publications_10_years,
         )
