@@ -11,3 +11,7 @@ CURRENT_YEAR = datetime.now().year
 END_YEAR = CURRENT_YEAR - 1
 START_YEAR = END_YEAR - 10
 print(START_YEAR, END_YEAR)
+
+if not OUTPUT_DIR.exists():
+    OUTPUT_DIR.mkdir(parents=True)
+

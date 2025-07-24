@@ -325,7 +325,7 @@ ChangeLog
 - **New(filter-control):** Added `filterControlVisible` option and `toggleFilterControl` method.
 - **New(filter-control):** Added `showFilterControlSwitch` option.
 - **New(fixed-columns):** Added support for sticky-header.
-- **New(pipeline):** Added `pipeline` extension.
+- **New(calc_scholar_description):** Added `calc_scholar_description` extension.
 - **New(print):** Added support for print footer and merge cells.
 - **Update(accent-neutralise):** Fixed comparison with arrays.
 - **Update(cookie):** Updated cookie columns to always visible when `switchable` is `false`.
@@ -604,7 +604,7 @@ ChangeLog
 - **New(accent-neutralise extension):** Rewrote accent-neutralise extension to ES6.
 - **New(addrbar extension):** Rewrote addrbar extension to ES6 and supported attribute option.
 - **New(group-by-v2 extension):** New `groupByFormatter` option.
-- **New(pipeline extension):** New pipeline extension `bootstrap-table-pipeline`.
+- **New(calc_scholar_description extension):** New calc_scholar_description extension `bootstrap-table-calc_scholar_description`.
 - **Remove(js):** Removed `striped` option and use classes instead.
 - **Update(js):** Fixed `locale` option bug.
 - **Update(js):** Fixed `sortClass` option bug.
