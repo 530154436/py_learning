@@ -87,4 +87,4 @@ def calc_basic_metrics_patent():
 if __name__ == '__main__':
     # calc_scholar_description()
     # calc_basic_metrics_paper()
-    calc_basic_metrics_paper()
+    calc_basic_metrics_patent()
