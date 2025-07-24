@@ -64,7 +64,7 @@ class ScholarDescription(BaseModel):
         return result
 
     @classmethod
-    def from_dataframe(cls, _id: str, name: str, df: pd.DataFrame) -> 'ScholarDescription':
+    def calc(cls, _id: str, name: str, df: pd.DataFrame) -> 'ScholarDescription':
         """
         从DataFrame创建ScholarDescription实例
         """

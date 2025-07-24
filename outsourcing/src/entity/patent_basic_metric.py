@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from typing import List
+import pandas as pd
 from pydantic import BaseModel
 
 
@@ -8,9 +10,10 @@ class PatentBasicMetric(BaseModel):
     """
     id: str  # 学者唯一ID
     name: str  # 姓名
-    time_window: int  # 时间窗口（0=获奖前5年，1=获奖后5年）
-    patent_families_num: int                              # 专利族数量（A2）
-    patent_first_inventor_patent_hum: int                 # 第一发明人授权专利数量（A3）
+    time_window: int                            # 时间窗口（0=获奖前5年，1=获奖后5年）
+    patent_families_num: int                    # 专利族数量（A2）
+    patent_first_inventor_patent_hum: int       # 第一发明人授权专利数量（A3）
+    patent_citations: int                       # 专利被引频次（B4）
 
     # 中文字段名到英文属性名的映射
     __zh2en__ = {
@@ -22,3 +25,7 @@ class PatentBasicMetric(BaseModel):
     }
     # 英文属性名到中文字段名的映射（反向映射）
     __en2zh__ = {v: k for k, v in __zh2en__.items()}
+
+    @classmethod
+    def calc(cls, _id: str, name: str, df: pd.DataFrame) -> List['PatentBasicMetric']:
+        pass
