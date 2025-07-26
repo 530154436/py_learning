@@ -47,16 +47,15 @@ class ScholarBasicMetric(AbstractBase):
         # 预处理
         df = cls.preprocessing(df)
 
+        time_windows = [(0, (TIME_WINDOW_0_START, TIME_WINDOW_0_END)),
+                        (1, (TIME_WINDOW_1_START, TIME_WINDOW_1_END))]
         results = []
-        for time_window, (start_year, end_year) in zip([0, 1],
-                                                       [(TIME_WINDOW_0_START, TIME_WINDOW_0_END),
-                                                        TIME_WINDOW_1_START, TIME_WINDOW_1_END]):
+        for time_window, (start_year, end_year) in time_windows:
             mask_time_window = (start_year < df["Publication Year"]) & (df["Publication Year"] <= end_year)  # 2015-2019
             print(_id, name, "时间窗口:", time_window)
 
             # 1、总发文量：统计学者在时间窗口内发表论文总数
-            total_publications = mask_time_window \
-                                 & df["UT (Unique WOS ID)"].nunique(dropna=True)
+            total_publications = df[mask_time_window]["UT (Unique WOS ID)"].nunique(dropna=True)
             print("总发文量:", total_publications)
 
             # 2、SCI论文数：统计学者在时间窗口内发表SCI论文数
@@ -97,7 +96,7 @@ class ScholarBasicMetric(AbstractBase):
             # 6、单篇最高被引频次（B2）：在给定时间窗口内（5年）累计总被引频次最高的通讯作者论文引用次数（TODO:通讯作者论文定义同第4点？）
             years = list(str(year) for year in range(start_year, end_year + 1))
             sum_citations_per_paper = df[mask_corr][years].sum(axis=1)  # 对每篇论文按年份列求和，得到每篇论文在时间窗口内的总被引次数
-            max_citations_single_paper = sum_citations_per_paper.max()
+            max_citations_single_paper = int(sum_citations_per_paper.max())
             print("单篇被引频次:\n", sum_citations_per_paper.head())
             print("单篇最高被引频次（B2）:", max_citations_single_paper)
 

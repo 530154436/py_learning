@@ -7,7 +7,7 @@ from config import DATASET_DIR, OUTPUT_DIR
 from entity.scholar_base import ScholarBase
 from entity.scholar_description import ScholarDescription
 from entity.scholar_basic_metric import ScholarBasicMetric
-# from entity.patent_basic_metric import PatentBasicMetric
+from entity.patent_basic_metric import PatentBasicMetric
 
 
 def calc_scholar_description():
@@ -15,6 +15,7 @@ def calc_scholar_description():
     file = DATASET_DIR.joinpath("S2-统计分析数据集.xlsx")
     df_scholar_description: DataFrame = pd.read_excel(file, sheet_name="学者描述性统计（综合报告附表1，领域报告表1-1、附表1)")
     # print(df_scholar_description.head())
+    print(df_scholar_description.columns)
 
     df_raw: DataFrame = pd.read_excel(DATASET_DIR.joinpath("S0.1-原始数据表-249人学术生涯论文数据汇总.xlsx"))
     descriptions = []
@@ -41,8 +42,10 @@ def calc_basic_metrics_paper():
     file = DATASET_DIR.joinpath("S2-统计分析数据集.xlsx")
     df_scholar_metric: DataFrame = pd.read_excel(file, sheet_name="二级指标归一化值（2015-2024年）")
     print(df_scholar_metric.head())
+    print(df_scholar_metric.columns)
 
     df_raw: DataFrame = pd.read_excel(DATASET_DIR.joinpath("S1.1-目标数据表-249人获奖前后10年论文数据汇总.xlsx"))
+    print(df_raw.columns)
     data = []
     for i, row in enumerate(df_scholar_metric.to_dict(orient="records"), start=1):
         _id = str(row["学者唯一ID"])

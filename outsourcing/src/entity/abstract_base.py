@@ -40,6 +40,7 @@ class AbstractBase(BaseModel):
     def preprocessing(df: DataFrame) -> DataFrame:
         # 论文发表年份
         df["Publication Year"] = df["Publication Year"].astype(int)
+        df.columns = df.columns.astype(str)
 
         # 论文ID: UT (Unique WOS ID)
         # 作者+论文ID：去空、去重
