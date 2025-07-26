@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
-from typing import List, Any, Union
 import pandas as pd
-from pandas import DataFrame
-from pydantic import BaseModel
 from config import TIME_WINDOW_1_END, TIME_WINDOW_0_END, TIME_WINDOW_0_START
+from entity.abstract_base import AbstractBase
+from utils.pd_common_util import contains_in
 
 
-class ScholarDescription(BaseModel):
+class ScholarDescription(AbstractBase):
     """
     学者描述性统计（综合报告附表1，领域报告表1-1、附表1)
     """
@@ -39,57 +38,6 @@ class ScholarDescription(BaseModel):
     # 英文属性名到中文字段名的映射（反向映射）
     __en2zh__ = {v: k for k, v in __zh2en__.items()}
 
-    @staticmethod
-    def calc_h_index(citations: List[int]) -> int:
-        """
-        H-index是一个数字，由Jorge Hirsch于2005年开始使用，旨在描述科研人员的科学生产力和影响力。
-        H-index是通过对同一个科研人员所发表的文章个数及每篇文章他引的次数不低于发表文章个数进行计算的。
-        例如：H-index为17意味着该科研人员发表了至少17篇论文，且每篇论文被引用了至少17次。
-            如果该科研人员被引用次数最多的第18次出版物仅被引用10次，则h指数将保持在17。
-            如果该科研人员被引用次数最多的第18次出版物被18次或更多次引用，则h索引将升高到18。
-        我们假设引用次数为m，引用次数大于等于m的论文有n篇，那么只要m>=n，那么一就能得到一个h指数=n（但这里的h指数不一定是最大）：
-            h=min(m,n) if m>=n
-        那么如何寻找最大的那个h指数呢？首先如果考虑暴力搜索，那么时间复杂度时O(n^2)
-        但如果首先根据引用次数多少进行排序，对于第i个元素，我们就可以得到这个等式：
-            h指数=论文引用次数大于等于citations[i]的数目=len(citations)-i
-        从上面可知，从前往后遍历h指数只能是越来越小（因为i越来越大），于是只需找到第一个满足h指数条件对应的h即可。
-        https://zhuanlan.zhihu.com/p/388589868
-        """
-        citations.sort()
-        result = 0
-        cite_num = len(citations)
-        for i in range(0, cite_num):
-            if citations[i] >= cite_num - i:
-                result = cite_num - i
-                break
-        return result
-
-    @staticmethod
-    def preprocessing(df: DataFrame) -> DataFrame:
-        # 论文发表年份
-        df["Publication Year"] = df["Publication Year"].astype(int)
-
-        # 论文ID: UT (Unique WOS ID)
-        # 作者+论文ID：去空、去重
-        df = df.dropna(subset=["UT (Unique WOS ID)", "姓名"])
-        df = df.drop_duplicates(subset=["UT (Unique WOS ID)", "姓名"], keep="first")
-
-        # 论文发表时间截止到2024年
-        df = df[df["Publication Year"] <= TIME_WINDOW_1_END].copy()
-        return df
-
-    @staticmethod
-    def contains_in(series: pd.Series, values: Union[List[str], str]) -> pd.Series:
-        """
-        判断series中是否包含多个指定的值（不区分大小写）
-        """
-        series = series.str.lower().copy()  # 不修改原始值
-        if isinstance(values, str):
-            return series.str.contains(values.lower(), na=False)
-        elif isinstance(values, (list, tuple, set)):
-            return series.apply(lambda x: any(val.lower() in x for val in values))
-        else:
-            raise TypeError("Unsupported type for 'values': {}".format(type(values)))
     @classmethod
     def calc(cls, _id: str, name: str, df: pd.DataFrame) -> 'ScholarDescription':
         """
@@ -128,22 +76,23 @@ class ScholarDescription(BaseModel):
 
         # 7、10年SCI论文总发文量：统计Web of Science Index中的Science Citation Index Expanded (SCI-EXPANDED)，即SCI论文
         mask = mask_10_year \
-           & cls.contains_in(df["Web of Science Index"], ["Science Citation Index Expanded (SCI-EXPANDED)"]) \
-           & cls.contains_in(df["Document Type"], ["Article", "Review"])
+            & contains_in(df["Web of Science Index"], ["Science Citation Index Expanded (SCI-EXPANDED)"]) \
+            & contains_in(df["Document Type"], ["Article", "Review"])
         total_sci_publications_10_years = df[mask]["UT (Unique WOS ID)"].nunique(dropna=True)
         print(f"10年SCI论文总发文量:", total_sci_publications_10_years)
 
         # 8、10年会议论文总发文量：统计Web of Science Index中的Conference Proceedings Citation Index - Science (CPCI-S)，即会议论文
         # TODO: （多个会议的情况，id+优先级SCI-E>CPCI-S>preprint）
         mask = mask_10_year \
-            & cls.contains_in(df["Web of Science Index"], ["Conference Proceedings Citation Index - Science (CPCI-S)"]) \
-            & (~cls.contains_in(df["Web of Science Index"], ["Science Citation Index Expanded (SCI-EXPANDED)"]))
+            & contains_in(df["Web of Science Index"], ["Conference Proceedings Citation Index - Science (CPCI-S)"]) \
+            & (~contains_in(df["Web of Science Index"], ["Science Citation Index Expanded (SCI-EXPANDED)"])) \
+            & contains_in(df["Document Type"], ["Article", "Review"])
         total_meeting_publications_10_years = df[mask]["UT (Unique WOS ID)"].nunique(dropna=True)
         print(f"10年会议论文总发文量:", total_meeting_publications_10_years)
 
         # 9、10年预印本总发文量：统计Web of Science Index中的preprint，即预印本
         mask = mask_10_year \
-               & cls.contains_in(df["Web of Science Index"], ["preprint"])
+               & contains_in(df["Web of Science Index"], ["preprint"])
         total_preprint_publications_10_years = df[mask]["UT (Unique WOS ID)"].nunique(dropna=True)
         print(f"10年预印本总发文量:", total_preprint_publications_10_years)
 

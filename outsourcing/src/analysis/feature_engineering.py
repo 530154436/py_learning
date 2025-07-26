@@ -6,7 +6,7 @@ from pandas import DataFrame
 from config import DATASET_DIR, OUTPUT_DIR
 from entity.scholar_base import ScholarBase
 from entity.scholar_description import ScholarDescription
-# from entity.scholar_basic_metric import ScholarBasicMetric
+from entity.scholar_basic_metric import ScholarBasicMetric
 # from entity.patent_basic_metric import PatentBasicMetric
 
 
@@ -85,8 +85,8 @@ def calc_basic_metrics_patent():
 
 
 if __name__ == '__main__':
-    calc_scholar_description()
-    # calc_basic_metrics_paper()
+    # calc_scholar_description()
+    calc_basic_metrics_paper()
     # calc_basic_metrics_patent()
 
     # 概要计算：多少个学者、多少个领域、一共多少论文、....

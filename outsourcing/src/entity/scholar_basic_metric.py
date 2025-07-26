@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-from typing import List
 import pandas as pd
-from pydantic import BaseModel
-from config import BEHIND_5_END_YEAR
+from typing import List
+from config import TIME_WINDOW_0_END, TIME_WINDOW_1_END, TIME_WINDOW_0_START, TIME_WINDOW_1_START
+from entity.abstract_base import AbstractBase
+from utils.pd_common_util import contains_in
 
 
-class ScholarBasicMetric(BaseModel):
+class ScholarBasicMetric(AbstractBase):
     """
     获奖学者时间窗口指标（获奖前5年 / 获奖后5年）
     """
@@ -43,63 +44,76 @@ class ScholarBasicMetric(BaseModel):
         从DataFrame创建ScholarBasicMetric实例
         计算论文相关基础指标
         """
-        df["Cited Reference Count"] = df["Cited Reference Count"].fillna(0)
+        # 预处理
+        df = cls.preprocessing(df)
 
-        mask_0_5_year = (BEHIND_5_END_YEAR - 10 < df["Publication Year"]) & (df["Publication Year"] <= BEHIND_5_END_YEAR - 5)    # 2015-2019
-        mask_5_10_year = (BEHIND_5_END_YEAR - 5 < df["Publication Year"]) & (df["Publication Year"] <= BEHIND_5_END_YEAR)        # 2020-2024
         results = []
-        for time_window, mask_time_window in zip([0, 1], [mask_0_5_year, mask_5_10_year]):
-            df_sub: pd.DataFrame = df.loc[mask_time_window]
+        for time_window, (start_year, end_year) in zip([0, 1],
+                                                       [(TIME_WINDOW_0_START, TIME_WINDOW_0_END),
+                                                        TIME_WINDOW_1_START, TIME_WINDOW_1_END]):
+            mask_time_window = (start_year < df["Publication Year"]) & (df["Publication Year"] <= end_year)  # 2015-2019
             print(_id, name, "时间窗口:", time_window)
 
-            # TODO: UT (Unique WOS ID) 去空、作者+论文ID去重
             # 1、总发文量：统计学者在时间窗口内发表论文总数
-            total_publications = df_sub["Publication Year"].count()
+            total_publications = mask_time_window \
+                                 & df["UT (Unique WOS ID)"].nunique(dropna=True)
             print("总发文量:", total_publications)
 
             # 2、SCI论文数：统计学者在时间窗口内发表SCI论文数
-            mask = df_sub["Web of Science Index"] == "Science Citation Index Expanded (SCI-EXPANDED)"
-            total_sci_publications = df_sub[mask]["Publication Year"].count()
+            mask = mask_time_window &\
+                contains_in(df["Web of Science Index"], ["Science Citation Index Expanded (SCI-EXPANDED)"]) \
+                & contains_in(df["Document Type"], ["Article", "Review"])
+            total_sci_publications = df[mask]["UT (Unique WOS ID)"].nunique(dropna=True)
             print("SCI论文数:", total_sci_publications)
 
             # 3、会议论文数：统计学者在时间窗口内发表会议论文数
-            mask = df_sub["Web of Science Index"] == "Conference Proceedings Citation Index - Science (CPCI-S)"
-            total_meeting_publications = df_sub[mask]["Publication Year"].count()
+            mask = mask_time_window \
+                & contains_in(df["Web of Science Index"], ["Conference Proceedings Citation Index - Science (CPCI-S)"]) \
+                & (~contains_in(df["Web of Science Index"], ["Science Citation Index Expanded (SCI-EXPANDED)"])) \
+                & contains_in(df["Document Type"], ["Article", "Review"])
+            total_meeting_publications = df[mask]["UT (Unique WOS ID)"].nunique(dropna=True)
             print("会议论文数:", total_meeting_publications)
 
-            # 4、通讯作者论文数（A1）：学者在给定时间内作为通讯作者身份发表总论文数（SCI/会议/预印本）TODO包含
-            mask = (df_sub["is_corresponding_author(except for math)"] == 1) \
-                & (
-                   (df_sub["Web of Science Index"] == "Conference Proceedings Citation Index - Science (CPCI-S)")
-                   |(df_sub["Web of Science Index"] == "Science Citation Index Expanded (SCI-EXPANDED)")
-                   |(df_sub["Web of Science Index"] == "preprint")
-                )
-            total_corresponding_author_papers = df_sub[mask]["Publication Year"].count()
+            # 4、通讯作者论文数（A1）：学者在给定时间内作为通讯作者身份发表总论文数（SCI/会议/预印本）
+            mask_corr = mask_time_window \
+                & (df["is_corresponding_author(except for math)"] == 1) \
+                & contains_in(df["Web of Science Index"],
+                                  values=["Conference Proceedings Citation Index - Science (CPCI-S)",
+                                          "Science Citation Index Expanded (SCI-EXPANDED)",
+                                          "preprint"]) \
+                & contains_in(df["Document Type"], ["Article", "Review"])
+            total_corresponding_author_papers = df[mask_corr]["UT (Unique WOS ID)"].nunique(dropna=True)
             print("通讯作者论文数（SCI/会议/预印本）:", total_corresponding_author_papers)
 
             # 5、论文篇均被引频次（B1）：通讯作者论文篇均被引频次（TODO:通讯作者论文定义同第4点）
-            # TODO: 前5年：2015	2016	2017	2018	2019，这五年求和；每篇被引用总数求和/发表论文数
-            avg_citations_per_paper = round(df_sub[mask][].mean(), ndigits=3)
-            print("论文篇均被引频次（B1）:", avg_citations_per_paper)
+            # 计算方式:
+            # 前5年：2015、2016、2017、2018、2019，这五年求和；每篇被引用总数求和/发表论文数
+            # 后5年：2020、2021、2022、2023、2024，这五年求和；每篇被引用总数求和/发表论文数
+            years = list(str(year) for year in range(start_year, end_year + 1))
+            sum_citations = df[mask_corr][years].values.sum()
+            avg_citations_per_paper = round(sum_citations/total_corresponding_author_papers, ndigits=3)
+            print(f"论文篇均被引频次（B1）: 计算年份={years}, 总被引用数={sum_citations}, 篇均被引频次={avg_citations_per_paper}")
 
             # 6、单篇最高被引频次（B2）：在给定时间窗口内（5年）累计总被引频次最高的通讯作者论文引用次数（TODO:通讯作者论文定义同第4点？）
-            # max
-            max_ref = df_sub[mask][].max()
-            max_citations_single_paper = 0 if pd.isnull(max_ref) else int(max_ref)
+            years = list(str(year) for year in range(start_year, end_year + 1))
+            sum_citations_per_paper = df[mask_corr][years].sum(axis=1)  # 对每篇论文按年份列求和，得到每篇论文在时间窗口内的总被引次数
+            max_citations_single_paper = sum_citations_per_paper.max()
+            print("单篇被引频次:\n", sum_citations_per_paper.head())
             print("单篇最高被引频次（B2）:", max_citations_single_paper)
 
             # 7、Q1区通讯作者论文数量占比（B3）：各领域JCR前10%期刊或重要国际会议通讯作者论文数量占比
             # 根据is_corresponding_author(except for math)和is_top_journal_confer两个字段筛选出研究者作为通讯作者且发表在顶级期刊或会议上的论文。
-            mask = (df_sub["is_corresponding_author(except for math)"] == 1) \
-                & (df_sub["is_top_journal_confer（1=yes,0=no,other=preprint）"] == 1) \
-                & (
-                   (df_sub["Web of Science Index"] == "Conference Proceedings Citation Index - Science (CPCI-S)")
-                   | (df_sub["Web of Science Index"] == "Science Citation Index Expanded (SCI-EXPANDED)")
-                )
-            top_10_percent_corresponding_papers = df_sub[mask]["Publication Year"].count()
-            # 分母：total_sci_publications + total_meeting_publications
-            top_10_percent_corresponding_papers_ratio = round(top_10_percent_corresponding_papers / total_publications, 3)
-            print("Q1区通讯作者论文数量/总论文数:", total_corresponding_author_papers, total_publications)
+            mask = mask_time_window\
+                & (df["is_corresponding_author(except for math)"] == 1) \
+                & (df["is_top_journal_confer（1=yes,0=no,other=preprint）"] == 1) \
+                & contains_in(df["Web of Science Index"],
+                                  values=["Conference Proceedings Citation Index - Science (CPCI-S)",
+                                          "Science Citation Index Expanded (SCI-EXPANDED)"]) \
+                & contains_in(df["Document Type"], ["Article", "Review"])
+            top_10_percent_corresponding_papers = df[mask]["UT (Unique WOS ID)"].nunique(dropna=True)
+            top_10_percent_corresponding_total_publications = total_sci_publications + total_meeting_publications
+            top_10_percent_corresponding_papers_ratio = round(top_10_percent_corresponding_papers / top_10_percent_corresponding_total_publications, 3)
+            print("Q1区通讯作者论文数量/总论文数:", top_10_percent_corresponding_papers, top_10_percent_corresponding_total_publications)
             print("Q1区通讯作者论文数量占比:", top_10_percent_corresponding_papers_ratio)
 
             results.append(cls(

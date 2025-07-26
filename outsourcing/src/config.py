@@ -16,6 +16,8 @@ TIME_WINDOW_1_END = CURRENT_YEAR - 1
 print(f"当前年份={CURRENT_YEAR}, 时间窗口="
       f"[{TIME_WINDOW_0_START},{TIME_WINDOW_0_END}], "
       f"[{TIME_WINDOW_1_START},{TIME_WINDOW_1_END}]")
+# print(list(range(TIME_WINDOW_0_START, TIME_WINDOW_0_END + 1)))
+# print(list(range(TIME_WINDOW_1_START, TIME_WINDOW_1_END + 1)))
 
 if not OUTPUT_DIR.exists():
     OUTPUT_DIR.mkdir(parents=True)

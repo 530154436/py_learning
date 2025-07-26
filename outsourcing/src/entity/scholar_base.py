@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # from dataclasses import dataclass
 from pydantic import BaseModel
-from entity.scholar_description import ScholarDescription
 
 
 class ScholarBase(BaseModel):
