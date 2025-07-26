@@ -4,16 +4,16 @@ from typing import Any, Dict
 import pandas as pd
 from pandas import DataFrame
 from config import DATASET_DIR, OUTPUT_DIR
-from entity.patent_basic_metric import PatentBasicMetric
 from entity.scholar_base import ScholarBase
-from entity.scholar_basic_metric import ScholarBasicMetric
 from entity.scholar_description import ScholarDescription
+# from entity.scholar_basic_metric import ScholarBasicMetric
+# from entity.patent_basic_metric import PatentBasicMetric
 
 
 def calc_scholar_description():
     print("学者描述性统计")
     file = DATASET_DIR.joinpath("S2-统计分析数据集.xlsx")
-    df_scholar_description: DataFrame = pd.read_excel(file, sheet_name="学者描述性统计")
+    df_scholar_description: DataFrame = pd.read_excel(file, sheet_name="学者描述性统计（综合报告附表1，领域报告表1-1、附表1)")
     # print(df_scholar_description.head())
 
     df_raw: DataFrame = pd.read_excel(DATASET_DIR.joinpath("S0.1-原始数据表-249人学术生涯论文数据汇总.xlsx"))
@@ -85,6 +85,8 @@ def calc_basic_metrics_patent():
 
 
 if __name__ == '__main__':
-    # calc_scholar_description()
+    calc_scholar_description()
     # calc_basic_metrics_paper()
-    calc_basic_metrics_patent()
+    # calc_basic_metrics_patent()
+
+    # 概要计算：多少个学者、多少个领域、一共多少论文、....

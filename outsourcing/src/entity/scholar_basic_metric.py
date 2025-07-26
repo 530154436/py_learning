@@ -2,7 +2,7 @@
 from typing import List
 import pandas as pd
 from pydantic import BaseModel
-from config import END_YEAR
+from config import BEHIND_5_END_YEAR
 
 
 class ScholarBasicMetric(BaseModel):
@@ -45,13 +45,14 @@ class ScholarBasicMetric(BaseModel):
         """
         df["Cited Reference Count"] = df["Cited Reference Count"].fillna(0)
 
-        mask_0_5_year = (END_YEAR - 10 < df["Publication Year"]) & (df["Publication Year"] <= END_YEAR - 5)    # 2015-2019
-        mask_5_10_year = (END_YEAR - 5 < df["Publication Year"]) & (df["Publication Year"] <= END_YEAR)        # 2020-2024
+        mask_0_5_year = (BEHIND_5_END_YEAR - 10 < df["Publication Year"]) & (df["Publication Year"] <= BEHIND_5_END_YEAR - 5)    # 2015-2019
+        mask_5_10_year = (BEHIND_5_END_YEAR - 5 < df["Publication Year"]) & (df["Publication Year"] <= BEHIND_5_END_YEAR)        # 2020-2024
         results = []
         for time_window, mask_time_window in zip([0, 1], [mask_0_5_year, mask_5_10_year]):
             df_sub: pd.DataFrame = df.loc[mask_time_window]
             print(_id, name, "时间窗口:", time_window)
 
+            # TODO: UT (Unique WOS ID) 去空、作者+论文ID去重
             # 1、总发文量：统计学者在时间窗口内发表论文总数
             total_publications = df_sub["Publication Year"].count()
             print("总发文量:", total_publications)
@@ -66,7 +67,7 @@ class ScholarBasicMetric(BaseModel):
             total_meeting_publications = df_sub[mask]["Publication Year"].count()
             print("会议论文数:", total_meeting_publications)
 
-            # 4、通讯作者论文数（A1）：学者在给定时间内作为通讯作者身份发表总论文数（SCI/会议/预印本）
+            # 4、通讯作者论文数（A1）：学者在给定时间内作为通讯作者身份发表总论文数（SCI/会议/预印本）TODO包含
             mask = (df_sub["is_corresponding_author(except for math)"] == 1) \
                 & (
                    (df_sub["Web of Science Index"] == "Conference Proceedings Citation Index - Science (CPCI-S)")
@@ -76,14 +77,14 @@ class ScholarBasicMetric(BaseModel):
             total_corresponding_author_papers = df_sub[mask]["Publication Year"].count()
             print("通讯作者论文数（SCI/会议/预印本）:", total_corresponding_author_papers)
 
-            # 5、论文篇均被引频次（B1）：通讯作者论文篇均被引频次（TODO:通讯作者论文定义同第4点？）
-            # mask = df_sub["is_corresponding_author(except for math)"] == 1
-            avg_citations_per_paper = round(df_sub[mask]["Cited Reference Count"].mean(), ndigits=3)
+            # 5、论文篇均被引频次（B1）：通讯作者论文篇均被引频次（TODO:通讯作者论文定义同第4点）
+            # TODO: 前5年：2015	2016	2017	2018	2019，这五年求和；每篇被引用总数求和/发表论文数
+            avg_citations_per_paper = round(df_sub[mask][].mean(), ndigits=3)
             print("论文篇均被引频次（B1）:", avg_citations_per_paper)
 
             # 6、单篇最高被引频次（B2）：在给定时间窗口内（5年）累计总被引频次最高的通讯作者论文引用次数（TODO:通讯作者论文定义同第4点？）
-            # mask = df_sub["is_corresponding_author(except for math)"] == 1
-            max_ref = df_sub[mask]["Cited Reference Count"].max()
+            # max
+            max_ref = df_sub[mask][].max()
             max_citations_single_paper = 0 if pd.isnull(max_ref) else int(max_ref)
             print("单篇最高被引频次（B2）:", max_citations_single_paper)
 
@@ -96,6 +97,7 @@ class ScholarBasicMetric(BaseModel):
                    | (df_sub["Web of Science Index"] == "Science Citation Index Expanded (SCI-EXPANDED)")
                 )
             top_10_percent_corresponding_papers = df_sub[mask]["Publication Year"].count()
+            # 分母：total_sci_publications + total_meeting_publications
             top_10_percent_corresponding_papers_ratio = round(top_10_percent_corresponding_papers / total_publications, 3)
             print("Q1区通讯作者论文数量/总论文数:", total_corresponding_author_papers, total_publications)
             print("Q1区通讯作者论文数量占比:", top_10_percent_corresponding_papers_ratio)
