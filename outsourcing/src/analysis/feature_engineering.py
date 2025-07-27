@@ -40,7 +40,7 @@ def calc_scholar_description():
 def calc_basic_metrics_paper():
     print("基础指标计算-论文")
     file = DATASET_DIR.joinpath("S2-统计分析数据集.xlsx")
-    df_scholar_metric: DataFrame = pd.read_excel(file, sheet_name="二级指标归一化值（2015-2024年）")
+    df_scholar_metric: DataFrame = pd.read_excel(file, sheet_name="二级指标归一化值（2015-2024年）", header=1)
     print(df_scholar_metric.head())
     print(df_scholar_metric.columns)
 
@@ -89,7 +89,7 @@ def calc_basic_metrics_patent():
 
 if __name__ == '__main__':
     # calc_scholar_description()
-    calc_basic_metrics_paper()
-    # calc_basic_metrics_patent()
+    # calc_basic_metrics_paper()
+    calc_basic_metrics_patent()
 
     # 概要计算：多少个学者、多少个领域、一共多少论文、....
