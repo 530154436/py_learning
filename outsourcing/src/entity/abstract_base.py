@@ -3,13 +3,14 @@
 # @author: zhengchubin
 # @time: 2025/7/26 10:50
 # @function:
+import pandas as pd
 from typing import List
 from pandas import DataFrame
-from pydantic import BaseModel
-from config import TIME_WINDOW_1_END
+from config import TIME_WINDOW_1_END, OUTPUT_DIR
 
 
-class AbstractBase(BaseModel):
+class AbstractBase(object):
+    __tbl_name__ = ""
 
     @staticmethod
     def calc_h_index(citations: List[int]) -> int:
@@ -37,7 +38,7 @@ class AbstractBase(BaseModel):
         return result
 
     @staticmethod
-    def preprocessing(df: DataFrame) -> DataFrame:
+    def preprocessing_paper_data(df: DataFrame) -> DataFrame:
         # 论文发表年份
         df["Publication Year"] = df["Publication Year"].astype(int)
         df.columns = df.columns.astype(str)
@@ -54,3 +55,13 @@ class AbstractBase(BaseModel):
         # 论文发表时间截止到2024年
         df = df[df["Publication Year"] <= TIME_WINDOW_1_END].copy()
         return df
+
+    @classmethod
+    def save_to_excel(cls, df: pd.DataFrame, save_file: str = None):
+        if save_file is None:
+            save_file = cls.__tbl_name__
+            if not cls.__tbl_name__.endswith("xlsx"):
+                save_file += ".xlsx"
+        output_file = OUTPUT_DIR.joinpath(save_file)
+        with pd.ExcelWriter(output_file) as writer:
+            df.to_excel(writer, index=False)
