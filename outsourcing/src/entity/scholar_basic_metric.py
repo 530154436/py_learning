@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
+from matplotlib.font_manager import weight_dict
 from pydantic import BaseModel, Field
 from pathlib import Path
 from config import TIME_WINDOW_0_END, TIME_WINDOW_1_END, TIME_WINDOW_0_START, TIME_WINDOW_1_START
@@ -12,38 +13,40 @@ class ScholarBasicMetricEntity(BaseModel):
     # 三元组唯一标识
     id: str = Field(serialization_alias="学者唯一ID")
     name: str = Field(serialization_alias="姓名")
-    time_window: int = Field(serialization_alias="时间窗口（0=获奖前5年，1=获奖后5年）", description="")
+    research_type: int = Field(serialization_alias="研究类型（1=基础科学，0=工程技术，2=前沿交叉）")
+    time_window: int = Field(serialization_alias="时间窗口（0=获奖前5年，1=获奖后5年）")
 
     # 论文相关指标
     total_publications: int = Field(serialization_alias="总发文量", description="统计学者在时间窗口内发表论文总数")
     total_sci_publications: int = Field(serialization_alias="SCI论文数", description="统计学者在时间窗口内发表SCI论文数")
     total_meeting_publications: int = Field(serialization_alias="会议论文数", description="统计学者在时间窗口内发表会议论文数")
+
     total_corresponding_author_papers: int = Field(serialization_alias="通讯作者论文数（A1）", description="学者在给定时间内作为通讯作者身份发表总论文数（SCI/会议/预印本）")
     patent_families_num: int = Field(serialization_alias="专利族数量（A2）", description="学者在给定时间内拥有的DWPI同族专利数量")
     patent_first_inventor_patent_hum: int = Field(serialization_alias="第一发明人授权专利数量（A3）",description="学者在给定时间内作为第一发明人授权的发明专利数量")
     avg_citations_per_paper: float = Field(serialization_alias="论文篇均被引频次（B1）", description="通讯作者论文篇均被引频次")
     max_citations_single_paper: int = Field(serialization_alias="单篇最高被引频次（B2）", description="在给定时间窗口内累计总被引频次最高的通讯作者论文引用次数")
     top_10p_corr_paper_ratio: float = Field(serialization_alias="前10%高影响力期刊或会议通讯作者论文数量占比（B3）", description="各领域JCR前10%期刊或重要国际会议通讯作者论文数量占比")
-    patent_citations: int = Field(serialization_alias="专利被引次数（B4）", description="指专利族截至数据采集时间的总被引用次数")
+    patent_citations: int = Field(serialization_alias="专利被引频次（B4）", description="指专利族截至数据采集时间的总被引用次数")
 
 
 class ScholarBasicMetric(AbstractBase):
     __tbl_name__ = "指标计算（2015-2024年）"
 
     def __init__(self, basic_info_path: Path,
-                 data_paper_path: Path, data_patent_path: Path):
+                 data_paper_path: Path, data_patent_path: Path, **kwargs):
         super().__init__()
         self.basic_info_path = basic_info_path
         self.data_paper_path = data_paper_path
         self.data_patent_path = data_patent_path
+        self.data_weight_path = kwargs.get("data_weight_path")
 
-    @classmethod
-    def calc_one_in_paper(cls, df: pd.DataFrame, start_year: int, end_year: int) -> dict:
+    def calc_one_in_paper(self, df: pd.DataFrame, start_year: int, end_year: int) -> dict:
         """
         计算论文相关基础指标
         """
         # 预处理
-        df = cls.preprocessing_paper_data(df)
+        df = self.preprocessing_paper_data(df)
 
         # 筛选时间窗口内数据，如2015-2019
         mask_time_window = (start_year <= df["Publication Year"]) & (df["Publication Year"] <= end_year)
@@ -205,6 +208,12 @@ class ScholarBasicMetric(AbstractBase):
         df_data = pd.merge(df_paper, df_patent, on=["id", "name", "time_window"], how="outer")
         df_data["id"] = df_data["id"].astype(str)
 
+        df_basic_info = pd.read_excel(self.basic_info_path)[["学者唯一ID", "姓名", "研究类型（1=基础科学，0=工程技术，2=前沿交叉）"]]
+        df_basic_info.rename(columns={"研究类型（1=基础科学，0=工程技术，2=前沿交叉）": "research_type", "学者唯一ID": "id", "姓名": "name"}, inplace=True)
+        df_basic_info["id"] = df_basic_info["id"].astype(str)
+        df_data = pd.merge(df_data, df_basic_info, on=["id", "name"], how="left")
+
+        # 原始数据
         data_zh = []
         for item in df_data.to_dict(orient="records"):
             entity = ScholarBasicMetricEntity(**item)
@@ -212,9 +221,53 @@ class ScholarBasicMetric(AbstractBase):
         df_data_zh = pd.DataFrame(data_zh)
         self.save_to_excel(df_data_zh, save_file=f"{self.__tbl_name__}.xlsx")
 
+        # 加载权重值
+        df_weight = pd.read_excel(self.data_weight_path)
+        columns = [
+            "通讯作者论文数（A1）",
+            "专利族数量（A2）",
+            "第一发明人授权专利数量（A3）",
+            "论文篇均被引频次（B1）",
+            "单篇最高被引频次（B2）",
+            "前10%高影响力期刊或会议通讯作者论文数量占比（B3）",
+            "专利被引频次（B4）",
+        ]
+        df_weight.columns = ["研究类型（1=基础科学，0=工程技术，2=前沿交叉）"] + [f"w_{i}" for i in columns + ["学术生产力", "学术影响力"]]
+        df_data_with_weight = pd.merge(df_data_zh, df_weight, on=["研究类型（1=基础科学，0=工程技术，2=前沿交叉）"], how="left")
+
+        # 归一化（min-max）
+        for column in columns:
+            _max = df_data_with_weight[column].max()
+            _min = df_data_with_weight[column].min()
+            df_data_with_weight[f"std_{column}"] = (df_data_with_weight[column] - _min) / (_max - _min)
+        print(df_data_with_weight)
+        print(df_data_with_weight.columns)
+
+        # 计算得分：权重*归一化值
+        for column in columns:
+            df_data_with_weight[f"score_{column}"] = df_data_with_weight[f"w_{column}"] * df_data_with_weight[f"std_{column}"]
+
+        # 计算一级指标
+        df_data_with_weight["学术生产力"] = 0
+        for column in columns[0:3]:
+            df_data_with_weight["学术生产力"] = df_data_with_weight["学术生产力"] + df_data_with_weight[f"score_{column}"].values
+
+        df_data_with_weight["学术影响力"] = 0
+        for column in columns[3:]:
+            df_data_with_weight["学术影响力"] = df_data_with_weight["学术生产力"] + df_data_with_weight[f"score_{column}"].values
+
+        df_data_with_weight["综合分数"] = \
+            df_data_with_weight["w_学术影响力"] * df_data_with_weight["学术影响力"] \
+            + df_data_with_weight["w_学术生产力"] * df_data_with_weight["学术生产力"]
+        print(df_data_with_weight)
+        self.save_to_excel(df_data_with_weight, save_file=f"{self.__tbl_name__}_with_weight.xlsx")
+
 
 if __name__ == "__main__":
     _input_file0 = DATASET_DIR.joinpath("S0.0-获奖人基础信息表.xlsx")
     _input_file1 = DATASET_DIR.joinpath("S1.1-目标数据表-249人获奖前后10年论文数据汇总.xlsx")
     _input_file2 = DATASET_DIR.joinpath("S1.2-目标数据集-249人获奖前后10年专利数据汇总.xlsx")
-    ScholarBasicMetric(_input_file0, data_paper_path=_input_file1, data_patent_path=_input_file2).calc()
+    _input_file3 = DATASET_DIR.joinpath("S0.3指标计算权重值.xlsx")
+    _metric = ScholarBasicMetric(_input_file0, data_paper_path=_input_file1,
+                                 data_patent_path=_input_file2, data_weight_path=_input_file3)
+    _metric.calc()
