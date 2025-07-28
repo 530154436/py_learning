@@ -30,6 +30,11 @@ class ScholarBasicMetricEntity(BaseModel):
     patent_citations: int = Field(serialization_alias="专利被引频次（B4）", description="指专利族截至数据采集时间的总被引用次数")
 
 
+class DataType(object):
+    paper = "论文"
+    patent = "专利"
+
+
 class ScholarBasicMetric(AbstractBase):
     __tbl_name__ = "指标计算（2015-2024年）"
 
@@ -162,9 +167,9 @@ class ScholarBasicMetric(AbstractBase):
     def calc_by_data_type(self, data_type: str) -> pd.DataFrame:
         # 读取基础信息表和数据表
         df_basic_info = pd.read_excel(self.basic_info_path)
-        if data_type == "paper":
+        if data_type == DataType.paper:
             df_data = pd.read_excel(self.data_paper_path)
-        elif data_type == "patent":
+        elif data_type == DataType.patent:
             df_data = pd.read_excel(self.data_patent_path)
         else:
             raise ValueError("data_type must be 'paper' or 'patent'")
@@ -188,23 +193,23 @@ class ScholarBasicMetric(AbstractBase):
                             (1, (TIME_WINDOW_1_START, TIME_WINDOW_1_END))]
             for time_window, (start_year, end_year) in time_windows:
                 result = {"id": _id, "name": name, "time_window": time_window}
-                if data_type == "paper":
+                if data_type == DataType.paper:
                     metric = self.calc_one_in_paper(df_data_subset.copy(), start_year=start_year, end_year=end_year)
-                elif data_type == "patent":
+                elif data_type == DataType.patent:
                     metric = self.calc_one_in_patent(df_data_subset.copy(), start_year=start_year, end_year=end_year)
                 else:
                     raise ValueError("data_type must be 'paper' or 'patent'")
                 result.update(metric)
                 data.append(result)
         df = pd.DataFrame(data)
-        self.save_to_excel(df, save_file=f"{self.__tbl_name__}_{data_type}.xlsx")
+        self.save_to_excel(df, save_file=f"{self.__tbl_name__}-{data_type}.xlsx")
         return df
 
     def calc(self) -> pd.DataFrame:
-        # df_paper = self.calc_by_data_type("paper")
-        # df_patent = self.calc_by_data_type("patent")
-        df_paper = pd.read_excel(OUTPUT_DIR.joinpath(f"{self.__tbl_name__}_paper.xlsx"))
-        df_patent = pd.read_excel(OUTPUT_DIR.joinpath(f"{self.__tbl_name__}_patent.xlsx"))
+        df_paper = self.calc_by_data_type(DataType.paper)
+        df_patent = self.calc_by_data_type(DataType.patent)
+        # df_paper = pd.read_excel(OUTPUT_DIR.joinpath(f"{self.__tbl_name__}_paper.xlsx"))
+        # df_patent = pd.read_excel(OUTPUT_DIR.joinpath(f"{self.__tbl_name__}_patent.xlsx"))
         df_data = pd.merge(df_paper, df_patent, on=["id", "name", "time_window"], how="outer")
         df_data["id"] = df_data["id"].astype(str)
 
@@ -219,7 +224,7 @@ class ScholarBasicMetric(AbstractBase):
             entity = ScholarBasicMetricEntity(**item)
             data_zh.append(entity.model_dump(mode="json", by_alias=True))
         df_data_zh = pd.DataFrame(data_zh)
-        self.save_to_excel(df_data_zh, save_file=f"{self.__tbl_name__}.xlsx")
+        self.save_to_excel(df_data_zh, save_file=f"{self.__tbl_name__}-原始数据.xlsx")
 
         # 加载权重值
         df_weight = pd.read_excel(self.data_weight_path)
@@ -260,7 +265,7 @@ class ScholarBasicMetric(AbstractBase):
             df_data_with_weight["w_学术影响力"] * df_data_with_weight["学术影响力"] \
             + df_data_with_weight["w_学术生产力"] * df_data_with_weight["学术生产力"]
         print(df_data_with_weight)
-        self.save_to_excel(df_data_with_weight, save_file=f"{self.__tbl_name__}_with_weight.xlsx")
+        self.save_to_excel(df_data_with_weight, save_file=f"{self.__tbl_name__}.xlsx")
 
 
 if __name__ == "__main__":
