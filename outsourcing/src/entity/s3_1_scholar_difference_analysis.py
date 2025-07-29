@@ -6,13 +6,14 @@ from pydantic import BaseModel, Field
 from typing import OrderedDict
 from config import DATASET_DIR, OUTPUT_DIR
 from entity.abstract_base import AbstractBase
-from entity.scholar_basic_metric import ScholarBasicMetric, ScholarBasicMetricEntity
+from entity.s2_2_scholar_basic_metric import ScholarBasicMetric
 
 
 class ScholarDifferenceAnalysisEntity(BaseModel):
     id: str = Field(serialization_alias="学者唯一ID")
     name: str = Field(serialization_alias="姓名")
     group_id: int = Field(serialization_alias="分组ID")
+    scholar_type: int = Field(serialization_alias="学者类型（获奖人=1，0=对照学者）")
     academic_prod_0: float = Field(serialization_alias="学术生产力0")
     academic_impact_0: float = Field(serialization_alias="学术影响力0")
     overall_score_0: float = Field(serialization_alias="综合分数0")
@@ -93,10 +94,12 @@ class ScholarDifferenceAnalysis(AbstractBase):
             scholar_id = row.get("学者唯一ID")
             scholar_name = row.get("姓名")
             group_id = row.get("分组ID")
+            scholar_type = row.get("学者类型（获奖人=1，0=对照学者）")
             result = OrderedDict({
                 "id": scholar_id,
                 "name": scholar_name,
                 "group_id": group_id,
+                "scholar_type": scholar_type,
             })
 
             # 时间窗口
