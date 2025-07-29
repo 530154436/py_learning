@@ -1,66 +1,35 @@
 # -*- coding: utf-8 -*-
 import re
-
 import pandas as pd
-from typing import List
 from pathlib import Path
-from pydantic import BaseModel, Field
+from dataclasses import dataclass, field
+from dataclasses_json import config
 from config import TIME_WINDOW_1_END, TIME_WINDOW_0_END, TIME_WINDOW_0_START, CURRENT_YEAR
 from analysis.abstract_base import AbstractBase
+from analysis.scholar_base import ScholarIdNameEntity
 from utils.pd_common_util import contains_in
 
 
-class ScholarDescriptionEntity(BaseModel):
+@dataclass
+class ScholarDescriptionEntity(ScholarIdNameEntity):
     """
-    学者唯一ID
-    姓名
-    工作单位
-    出生年
-    年龄（截至统计年份-2025年）
-    研究领域
-    研究类型（1=基础科学，0=工程技术，2=前沿交叉）
-    主要研究方向
-    学术奖励荣誉/资助
-    学者职业生涯长度（2024-首篇论文发表年份+1）
-    学者活跃年数（发表≥1篇论文的年份数）
-    学者职业生涯总发文量（截至2024年，wos核心合集SCI、CPCI-S，article、review、proceeding paper）
-    学者职业生涯SCI论文总发文量
-    学者职业生涯会议论文总发文量
-    2019年学者H指数（截止到2019年）
-    2024年学者H指数（截止到2024年）
-    10年总发文量
-    10年SCI论文总发文量
-    10年会议论文总发文量
-    10年申请专利
-    10年授权专利
-    10年专利族数量
+    学者描述信息（包含统计指标）
     """
-    # 基础信息
-    id: str = Field(serialization_alias="学者唯一ID")
-    name: str = Field(serialization_alias="姓名")
-    company: str = Field(serialization_alias="工作单位")
-    birth_year: str = Field(serialization_alias="出生年")
-    age: str = Field(serialization_alias=f"年龄（截至统计年份-{CURRENT_YEAR}年）")
-    research_field: str = Field(serialization_alias="研究领域")
-    research_type: str = Field(serialization_alias="研究类型（1=基础科学，0=工程技术，2=前沿交叉）")
-    main_research_direction: str = Field(serialization_alias="主要研究方向")
-    academic_honors: str = Field(serialization_alias="学术奖励荣誉/资助")
-
     # 统计类指标
-    career_length: int = Field(serialization_alias=f"学者职业生涯长度（{TIME_WINDOW_1_END}-首篇论文发表年份+1）")
-    active_years: int = Field(serialization_alias="学者活跃年数（发表≥1篇论文的年份数）")
-    career_total_pub: int = Field(serialization_alias="学者职业生涯总发文量")
-    career_total_sci_pub: int = Field(serialization_alias="学者职业生涯SCI论文总发文量")
-    career_total_meeting_pub: int = Field(serialization_alias="学者职业生涯会议论文总发文量")
-    h_index_tw_0_years: int = Field(serialization_alias=f"{TIME_WINDOW_0_END}年学者H指数（截止到{TIME_WINDOW_0_END}年）")
-    h_index_tw_1_years: int = Field(serialization_alias=f"{TIME_WINDOW_1_END}年学者H指数（截止到{TIME_WINDOW_1_END}年）")
-    total_pub_10_years: int = Field(serialization_alias="10年总发文量")
-    total_sci_pub_10_years: int = Field(serialization_alias="10年SCI论文总发文量")
-    total_meeting_pub_10_years: int = Field(serialization_alias="10年会议论文总发文量")
-    # total_preprint_pub_10_years: int = Field(serialization_alias="10年预印本总发文量")
-    patent_apply_num_10_years: int = Field(serialization_alias="10年申请专利")
-    patent_grant_num_10_years: int = Field(serialization_alias="10年授权专利")
-    patent_families_num_10_years: int = Field(serialization_alias="10年专利族数量")
+    career_length: int = field(metadata=config(field_name=f"学者职业生涯长度"))
+    active_years: int = field(metadata=config(field_name="学者活跃年数"))
+    career_total_pub: int = field(metadata=config(field_name="学者职业生涯总发文量"))
+    # career_total_sci_pub: int = field(metadata=config(field_name="学者职业生涯SCI论文总发文量"))
+    # career_total_meeting_pub: int = field(metadata=config(field_name="学者职业生涯会议论文总发文量"))
+    h_index_tw_0_years: int = field(metadata=config(field_name=f"{TIME_WINDOW_0_END}年学者H指数（截止到{TIME_WINDOW_0_END}年）"))
+    h_index_tw_1_years: int = field(metadata=config(field_name=f"{TIME_WINDOW_1_END}年学者H指数（截止到{TIME_WINDOW_1_END}年）"))
+    total_pub_10_years: int = field(metadata=config(field_name="10年总发文量"))
+    total_sci_pub_10_years: int = field(metadata=config(field_name="10年SCI论文总发文量"))
+    total_meeting_pub_10_years: int = field(metadata=config(field_name="10年会议论文总发文量"))
+    total_preprint_pub_10_years: int = field(metadata=config(field_name="10年预印本总发文量"))
+    total_pub_until_tw_0_end: int = field(metadata=config(field_name=f"{TIME_WINDOW_0_END}年之前总发文量"))
+    total_cits_until_tw_0_end: int = field(metadata=config(field_name=f"{TIME_WINDOW_0_END}年之前总被引频次"))
+    total_cits_per_paper_until_tw_0_end: int = field(metadata=config(field_name=f"{TIME_WINDOW_0_END}年之前篇均被引频次"))
 
 
 class ScholarDescription(AbstractBase):
@@ -70,6 +39,16 @@ class ScholarDescription(AbstractBase):
         super().__init__()
         self.basic_info_path = basic_info_path
         self.data_paper_path = data_paper_path
+
+    @staticmethod
+    def calc_citations_per_paper(df: pd.DataFrame, start_year: int, end_year: int) -> pd.DataFrame:
+        """
+        对每篇论文按年份列求和，得到每篇论文在时间窗口内的总被引次数
+        """
+        df_sub = df[df["Publication Year"] <= end_year]
+        years = list(str(year) for year in range(start_year, end_year + 1))
+        sum_citations_per_paper = df_sub[years].sum(axis=1)
+        return sum_citations_per_paper
 
     def calc_one_in_paper(self, df: pd.DataFrame) -> dict:
         """
@@ -92,17 +71,18 @@ class ScholarDescription(AbstractBase):
         print("学者职业生涯总发文量:", career_total_pub)
 
         # 4、2019年学者H指数（截止到2019年）
-        df_sub = df[df["Publication Year"] <= TIME_WINDOW_0_END]
-        h_index_tw_0_years = self.calc_h_index(df_sub["Cited Reference Count"].tolist())
+        sum_citations_per_paper = self.calc_citations_per_paper(df, start_year=1900, end_year=TIME_WINDOW_0_END)
+        h_index_tw_0_years = self.calc_h_index(sum_citations_per_paper.tolist())
         print(f"学者H指数：截止到{TIME_WINDOW_0_END}年:", h_index_tw_0_years)
 
         # 5、学者H指数：截止到2024年
-        df_sub = df[df["Publication Year"] <= TIME_WINDOW_1_END]
-        h_index_tw_1_years = self.calc_h_index(df_sub["Cited Reference Count"].tolist())
+        sum_citations_per_paper = self.calc_citations_per_paper(df, start_year=1900, end_year=TIME_WINDOW_1_END)
+        h_index_tw_1_years = self.calc_h_index(sum_citations_per_paper.tolist())
         print(f"学者H指数：截止到{TIME_WINDOW_1_END}年:", h_index_tw_1_years)
 
         # 6、10年总发文量
-        mask_10_year = (TIME_WINDOW_0_START <= df["Publication Year"]) & (df["Publication Year"] <= TIME_WINDOW_1_END)
+        mask_10_year = (TIME_WINDOW_0_START <= df["Publication Year"]) & \
+                       (df["Publication Year"] <= TIME_WINDOW_1_END)
         total_pub_10_years = df[mask_10_year]["UT (Unique WOS ID)"].nunique(dropna=True)
         print(f"10年总发文量（不区分Document Type）：", total_pub_10_years)
 
@@ -127,6 +107,21 @@ class ScholarDescription(AbstractBase):
         total_preprint_pub_10_years = df[mask]["UT (Unique WOS ID)"].nunique(dropna=True)
         print(f"10年预印本总发文量:", total_preprint_pub_10_years)
 
+        # 10、2019年之前总发文量
+        mask = df["Publication Year"] <= TIME_WINDOW_0_END
+        total_pub_until_tw_0_end = df[mask]["UT (Unique WOS ID)"].nunique(dropna=True)
+        print(f"{TIME_WINDOW_0_END}年之前总发文量:", total_pub_until_tw_0_end)
+
+        # 11、2019年之前总被引频次
+        sum_citations_per_paper = self.calc_citations_per_paper(df, start_year=1900, end_year=TIME_WINDOW_0_END)
+        total_cits_until_tw_0_end = sum_citations_per_paper.sum()
+        print(f"{TIME_WINDOW_0_END}年之前总被引频次:", total_cits_until_tw_0_end)
+
+        # 12、2019年之前篇均被引频次
+        sum_citations_per_paper = self.calc_citations_per_paper(df, start_year=1900, end_year=TIME_WINDOW_0_END)
+        total_cits_per_paper_until_tw_0_end = sum_citations_per_paper.mean()
+        print(f"{TIME_WINDOW_0_END}年之前总被引频次:", total_cits_per_paper_until_tw_0_end)
+
         return dict(
             career_length=career_length,
             active_years=active_years,
@@ -137,24 +132,12 @@ class ScholarDescription(AbstractBase):
             total_sci_pub_10_years=total_sci_pub_10_years,
             total_meeting_pub_10_years=total_meeting_pub_10_years,
             total_preprint_pub_10_years=total_preprint_pub_10_years,
+            total_pub_until_tw_0_end=total_pub_until_tw_0_end,
+            total_cits_until_tw_0_end=total_cits_until_tw_0_end,
+            total_cits_per_paper_until_tw_0_end=total_cits_per_paper_until_tw_0_end,
         )
 
-    def output_to_excel(self, data: List[dict]):
-
-        # join基础信息表
-        # 1、存英文字段
-        # 2、输出中文字段
-
-        # # 保存结果
-        # entity = ScholarDescriptionEntity(**result)
-        # results.append(entity.model_dump(mode='json', by_alias=True))
-        # print()
-        # df = pd.DataFrame(results)
-        # self.save_to_excel(df)
-        # return df
-        pass
-
-    def calc(self) -> pd.DataFrame:
+    def calc(self):
 
         # 读取基础信息表和数据表
         df_basic_info = pd.read_excel(self.basic_info_path)
@@ -167,19 +150,13 @@ class ScholarDescription(AbstractBase):
         for i, row in enumerate(df_basic_info.to_dict(orient="records"), start=1):
             _id = row["学者唯一ID"]
             name = row["姓名"]
-            print(row["出生年"])
-            age = int(re.search(r"\d+", str(row["出生年"])).group())  # 计算年龄
-            result = {
-                "id": _id,
-                "name": name,
-                "age": age,
-            }
             df_data_subset = df_data[df_data["姓名"] == name]
             print(f"{i:03d}/{df_basic_info.shape[0]}: 学者唯一ID={_id}, 姓名={name}, 数据行数={df_data_subset.shape[0]}")
-            stats: dict = self.calc_one_in_paper(df_data_subset.copy())
-            result.update(stats)
 
-        self.output_to_excel(results)
+            result: dict = self.calc_one_in_paper(df_data_subset.copy())
+            row.update(result)
+            results.append(row)
+        self.save_to_excel(results, clazz=ScholarDescriptionEntity)
 
 
 if __name__ == "__main__":

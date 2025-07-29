@@ -4,7 +4,8 @@
 # @time: 2025/7/26 10:50
 # @function:
 import pandas as pd
-from typing import List
+from typing import List, overload
+from dataclasses_json import DataClassJsonMixin
 from pandas import DataFrame
 from config import TIME_WINDOW_1_END, OUTPUT_DIR
 
@@ -57,7 +58,8 @@ class AbstractBase(object):
         return df
 
     @classmethod
-    def save_to_excel(cls, df: pd.DataFrame, save_file: str = None):
+    def _save_to_excel(cls, df: DataFrame, save_file: str = None):
+        # 保存excel
         if save_file is None:
             save_file = cls.__tbl_name__
             if not cls.__tbl_name__.endswith("xlsx"):
@@ -65,3 +67,18 @@ class AbstractBase(object):
         output_file = OUTPUT_DIR.joinpath(save_file)
         with pd.ExcelWriter(output_file) as writer:
             df.to_excel(writer, index=False)
+        print(f"Saved to {output_file}")
+
+    @classmethod
+    def save_to_excel(cls, results: List[dict], clazz: type[DataClassJsonMixin], save_file: str = None):
+        """
+        中英文字段映射后写入excel
+        """
+        # 转换为中文字段名
+        data = []
+        for result in results:
+            entity = clazz.from_dict(result)
+            print(entity)
+            data.append(entity.to_dict())
+        df_new = pd.DataFrame(data)
+        cls._save_to_excel(df_new, save_file=save_file)
