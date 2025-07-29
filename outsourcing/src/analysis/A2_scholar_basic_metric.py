@@ -2,6 +2,8 @@
 import pandas as pd
 from pydantic import BaseModel, Field
 from pathlib import Path
+
+from analysis import DataType
 from config import TIME_WINDOW_0_END, TIME_WINDOW_1_END, TIME_WINDOW_0_START, TIME_WINDOW_1_START
 from config import DATASET_DIR, OUTPUT_DIR
 from entity.abstract_base import AbstractBase
@@ -29,13 +31,8 @@ class ScholarBasicMetricEntity(BaseModel):
     patent_citations: int = Field(serialization_alias="专利被引频次（B4）", description="指专利族截至数据采集时间的总被引用次数")
 
 
-class DataType(object):
-    paper = "论文"
-    patent = "专利"
-
-
 class ScholarBasicMetric(AbstractBase):
-    __tbl_name__ = f"指标计算（{TIME_WINDOW_0_START}-{TIME_WINDOW_1_END}年）"
+    __tbl_name__ = f"A2-评价指标数据集"
 
     def __init__(self, basic_info_path: Path,
                  data_paper_path: Path, data_patent_path: Path, **kwargs):
@@ -201,15 +198,16 @@ class ScholarBasicMetric(AbstractBase):
                 result.update(metric)
                 data.append(result)
         df = pd.DataFrame(data)
+        df.drop_duplicates(subset=["id", "name", "time_window"], inplace=True)  # 去重
         self.save_to_excel(df, save_file=f"{self.__tbl_name__}-{data_type}.xlsx")
         return df
 
     def calc(self) -> pd.DataFrame:
-        df_paper = self.calc_by_data_type(DataType.paper)
-        df_patent = self.calc_by_data_type(DataType.patent)
-        # df_paper = pd.read_excel(OUTPUT_DIR.joinpath(f"{self.__tbl_name__}_paper.xlsx"))
-        # df_patent = pd.read_excel(OUTPUT_DIR.joinpath(f"{self.__tbl_name__}_patent.xlsx"))
-        df_data = pd.merge(df_paper, df_patent, on=["id", "name", "time_window"], how="outer")
+        # df_paper = self.calc_by_data_type(DataType.paper)
+        # df_patent = self.calc_by_data_type(DataType.patent)
+        df_paper = pd.read_excel(OUTPUT_DIR.joinpath(f"{self.__tbl_name__}-{DataType.paper}.xlsx"))
+        df_patent = pd.read_excel(OUTPUT_DIR.joinpath(f"{self.__tbl_name__}-{DataType.patent}.xlsx"))
+        df_data = pd.merge(df_paper, df_patent, on=["id", "name", "time_window"], how="inner")
         df_data["id"] = df_data["id"].astype(str)
 
         df_basic_info = pd.read_excel(self.basic_info_path)[["学者唯一ID", "姓名", "研究类型（1=基础科学，0=工程技术，2=前沿交叉）"]]
@@ -269,10 +267,10 @@ class ScholarBasicMetric(AbstractBase):
 
 
 if __name__ == "__main__":
-    _input_file0 = DATASET_DIR.joinpath("S0.0-获奖人基础信息表.xlsx")
+    _input_file0 = DATASET_DIR.joinpath("S2.1-学者基本信息.xlsx")
     _input_file1 = DATASET_DIR.joinpath("S1.1-目标数据表-249人获奖前后10年论文数据汇总.xlsx")
     _input_file2 = DATASET_DIR.joinpath("S1.2-目标数据集-249人获奖前后10年专利数据汇总.xlsx")
-    _input_file3 = DATASET_DIR.joinpath("S0.3指标计算权重值.xlsx")
+    _input_file3 = DATASET_DIR.joinpath("S0.5-指标计算权重值.xlsx")
     _metric = ScholarBasicMetric(_input_file0, data_paper_path=_input_file1,
                                  data_patent_path=_input_file2, data_weight_path=_input_file3)
     _metric.calc()
