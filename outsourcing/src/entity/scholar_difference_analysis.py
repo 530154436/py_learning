@@ -1,11 +1,26 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
 from pathlib import Path
+from pydantic import BaseModel, Field
 from config import TIME_WINDOW_0_END, TIME_WINDOW_1_END, TIME_WINDOW_0_START, TIME_WINDOW_1_START
 from config import DATASET_DIR, OUTPUT_DIR
 from entity.abstract_base import AbstractBase
 from entity.scholar_basic_metric import ScholarBasicMetric
 from utils.pd_common_util import contains_in
+
+
+# class ScholarDifferenceAnalysisEntity(BaseModel):
+#     id: str = Field(serialization_alias="学者唯一ID")
+#     name: str = Field(serialization_alias="姓名")
+#     career_length: int = Field(serialization_alias="学者职业生涯长度（2024-首篇论文发表年份+1）")
+#     active_years: int = Field(serialization_alias="学者活跃年数（发表≥1篇论文的年份数）")
+#     career_total_wos_publications: int = Field(serialization_alias="学者职业生涯总发文量")
+#     h_index_tw_0_years: int = Field(serialization_alias=f"{TIME_WINDOW_0_END}年学者H指数（截止到{TIME_WINDOW_0_END}年）")
+#     h_index_tw_1_years: int = Field(serialization_alias=f"{TIME_WINDOW_1_END}年学者H指数（截止到{TIME_WINDOW_1_END}年）")
+#     total_publications_10_years: int = Field(serialization_alias="10年总发文量")
+#     total_sci_publications_10_years: int = Field(serialization_alias="10年SCI论文总发文量")
+#     total_meeting_publications_10_years: int = Field(serialization_alias="10年会议论文总发文量")
+#     total_preprint_publications_10_years: int = Field(serialization_alias="10年预印本总发文量")
 
 
 class ScholarDifferenceAnalysis(AbstractBase):
@@ -31,13 +46,16 @@ class ScholarDifferenceAnalysis(AbstractBase):
 
         df = pd.merge(df_basic_info, df_data, on=["学者唯一ID", "姓名"], how="left")
 
-        # 时间窗口
-        time_windows = [0, 1]
-        for tw in time_windows:
-            # 分组计算差值
+        # 分组计算差值
+        df_winner =
+        for i, row in enumerate(df_winner.to_dict(orient="records"), start=1):
+
+            # 时间窗口
             mask = (df["时间窗口（0=获奖前5年，1=获奖后5年）"]==tw) & (df["学者类型（获奖人=1，0=对照学者）"]==1)
             df_winner_tw = df[mask]
-            for i, row in enumerate(df_winner_tw.to_dict(orient="records"), start=1):
+            time_windows = [0, 1]
+            for tw in time_windows:
+
                 print(f"{i:02}/{df_winner_tw.shape[0]}")
                 scholar_id = row.get("学者唯一ID")
                 scholar_name = row.get("姓名")
@@ -64,10 +82,6 @@ class ScholarDifferenceAnalysis(AbstractBase):
                 academic_impact_diff = academic_impact - academic_impact_compare
                 overall_score_diff = overall_score - overall_score_compare
                 print("差值: " f"学术生产力={academic_prod_diff}, 学术影响力={academic_impact_diff}, 综合分数={overall_score_diff}")
-
-
-
-
 
 
 if __name__ == "__main__":
