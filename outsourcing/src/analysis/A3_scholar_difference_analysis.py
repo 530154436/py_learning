@@ -2,52 +2,57 @@
 import json
 import pandas as pd
 from pathlib import Path
-from pydantic import BaseModel, Field
-from typing import OrderedDict
+from dataclasses import dataclass, field
+from dataclasses_json import config
+from analysis import GrowthPattern
+from analysis.A2_scholar_basic_metric_index import ScholarBasicMetricIndex
+from analysis.abstract_base import AbstractBase
+from analysis.scholar_comparison import ScholarComparisonEntity
 from config import DATASET_DIR, OUTPUT_DIR
-from entity.abstract_base import AbstractBase
-from entity.s2_2_scholar_basic_metric import ScholarBasicMetric
 
 
-class ScholarDifferenceAnalysisEntity(BaseModel):
-    id: str = Field(serialization_alias="学者唯一ID")
-    name: str = Field(serialization_alias="姓名")
-    group_id: int = Field(serialization_alias="分组ID")
-    scholar_type: int = Field(serialization_alias="学者类型（获奖人=1，0=对照学者）")
-    academic_prod_0: float = Field(serialization_alias="学术生产力0")
-    academic_impact_0: float = Field(serialization_alias="学术影响力0")
-    overall_score_0: float = Field(serialization_alias="综合分数0")
-    academic_prod_compare_0: float = Field(serialization_alias="对照学者均值-学术生产力0")
-    academic_impact_compare_0: float = Field(serialization_alias="对照学者均值-学术影响力0")
-    overall_score_compare_0: float = Field(serialization_alias="对照学者均值-综合分数0")
-    academic_prod_diff_0: float = Field(serialization_alias="差值-学术生产力0")
-    academic_impact_diff_0: float = Field(serialization_alias="差值-学术影响力0")
-    overall_score_diff_0: float = Field(serialization_alias="差值-综合分数0")
-    academic_prod_1: float = Field(serialization_alias="学术生产力1")
-    academic_impact_1: float = Field(serialization_alias="学术影响力1")
-    overall_score_1: float = Field(serialization_alias="综合分数1")
-    academic_prod_compare_1: float = Field(serialization_alias="对照学者均值-学术生产力1")
-    academic_impact_compare_1: float = Field(serialization_alias="对照学者均值-学术影响力1")
-    overall_score_compare_1: float = Field(serialization_alias="对照学者均值-综合分数1")
-    academic_prod_diff_1: float = Field(serialization_alias="差值-学术生产力1")
-    academic_impact_diff_1: float = Field(serialization_alias="差值-学术影响力1")
-    overall_score_diff_1: float = Field(serialization_alias="差值-综合分数1")
-    growth_pattern: str = Field(serialization_alias="成长模式")
+@dataclass
+class ScholarDifferenceAnalysisEntity(ScholarComparisonEntity):
+    """
+    学者差异分析实体：包含获奖人与对照组在两个时间窗口的得分对比
+    """
 
+    # 时间窗口 0（如获奖前）
+    academic_prod_0: float = field(metadata=config(field_name="学术生产力0"))
+    academic_impact_0: float = field(metadata=config(field_name="学术影响力0"))
+    overall_score_0: float = field(metadata=config(field_name="综合分数0"))
 
-class GrowthPattern(object):
-    szlxx: str = "始终领先型"
-    szlhx: str = "始终落后型"
-    ksczx: str = "快速成长型"
-    czfhx: str = "成长放缓型"
+    academic_prod_compare_0: float = field(metadata=config(field_name="对照学者均值-学术生产力0"))
+    academic_impact_compare_0: float = field(metadata=config(field_name="对照学者均值-学术影响力0"))
+    overall_score_compare_0: float = field(metadata=config(field_name="对照学者均值-综合分数0"))
+
+    academic_prod_diff_0: float = field(metadata=config(field_name="差值-学术生产力0"))
+    academic_impact_diff_0: float = field(metadata=config(field_name="差值-学术影响力0"))
+    overall_score_diff_0: float = field(metadata=config(field_name="差值-综合分数0"))
+
+    # 时间窗口 1（如获奖后）
+    academic_prod_1: float = field(metadata=config(field_name="学术生产力1"))
+    academic_impact_1: float = field(metadata=config(field_name="学术影响力1"))
+    overall_score_1: float = field(metadata=config(field_name="综合分数1"))
+
+    academic_prod_compare_1: float = field(metadata=config(field_name="对照学者均值-学术生产力1"))
+    academic_impact_compare_1: float = field(metadata=config(field_name="对照学者均值-学术影响力1"))
+    overall_score_compare_1: float = field(metadata=config(field_name="对照学者均值-综合分数1"))
+
+    academic_prod_diff_1: float = field(metadata=config(field_name="差值-学术生产力1"))
+    academic_impact_diff_1: float = field(metadata=config(field_name="差值-学术影响力1"))
+    overall_score_diff_1: float = field(metadata=config(field_name="差值-综合分数1"))
+
+    # 成长模式
+    growth_pattern: str = field(metadata=config(field_name="成长模式"))
 
 
 class ScholarDifferenceAnalysis(AbstractBase):
     __tbl_name__ = "A3-差值分析数据集"
 
-    def __init__(self, basic_info_path: Path, data_path: Path):
+    def __init__(self, comparison_path: Path, data_path: Path):
         super().__init__()
-        self.basic_info_path = basic_info_path
+        self.comparison_path = comparison_path
         self.data_path = data_path
 
     @staticmethod
@@ -71,36 +76,17 @@ class ScholarDifferenceAnalysis(AbstractBase):
             raise ValueError("计算错误：找不到对应的成长模式。")
 
     def calc(self) -> pd.DataFrame:
-
-        data_columns = ["学者唯一ID", "姓名", "研究类型（1=基础科学，0=工程技术，2=前沿交叉）",
-                        "时间窗口（0=获奖前5年，1=获奖后5年）", "学术生产力", "学术影响力", "综合分数"]
-        df_data = pd.read_excel(self.data_path)[data_columns]
-        df_data["学者唯一ID"] = df_data["学者唯一ID"].astype(str)
-        print(df_data.head())
-
-        info_columns = ["学者唯一ID", "分组ID", "关联ID", "学者类型（获奖人=1，0=对照学者）", "分组获奖人姓名", "姓名", "工作单位",
-                        "出生年", "年龄（截至统计年份-2025年）", "研究领域"]
-        df_basic_info = pd.read_excel(self.basic_info_path)[info_columns]
-        df_basic_info["学者唯一ID"] = df_basic_info["学者唯一ID"].astype(str)
-        print(df_basic_info.head())
-
         # 融合基础信息和计算结果
-        df = pd.merge(df_basic_info, df_data, on=["学者唯一ID", "姓名"], how="left")
+        df_comparison = pd.read_excel(self.comparison_path)
+        df = pd.read_excel(self.data_path)
+        print(df)
 
         # 分组计算差值
-        df_winner = df_basic_info[df_basic_info["学者类型（获奖人=1，0=对照学者）"] == 1]
+        df_winner = df_comparison[df_comparison["学者类型（获奖人=1，0=对照学者）"] == 1]
         results = []
         for i, row in enumerate(df_winner.to_dict(orient="records"), start=1):
-            scholar_id = row.get("学者唯一ID")
             scholar_name = row.get("姓名")
             group_id = row.get("分组ID")
-            scholar_type = row.get("学者类型（获奖人=1，0=对照学者）")
-            result = OrderedDict({
-                "id": scholar_id,
-                "name": scholar_name,
-                "group_id": group_id,
-                "scholar_type": scholar_type,
-            })
 
             # 时间窗口
             for tw in [0, 1]:
@@ -121,6 +107,7 @@ class ScholarDifferenceAnalysis(AbstractBase):
                                (df["分组ID"] == group_id) & \
                                (df["学者类型（获奖人=1，0=对照学者）"] == 0)
                 df_compare_tw = df[mask_compare][["姓名", "学术生产力", "学术影响力", "综合分数"]]
+                assert df_compare_tw.shape[0] == 4
                 print("对照组:\n")
                 print(df_compare_tw)
 
@@ -135,31 +122,26 @@ class ScholarDifferenceAnalysis(AbstractBase):
                 print("差值: "f"学术生产力={academic_prod_diff}, 学术影响力={academic_impact_diff}, 综合分数={overall_score_diff}")
                 print()
 
-                result[f"academic_prod_{tw}"] = academic_prod
-                result[f"academic_impact_{tw}"] = academic_impact
-                result[f"overall_score_{tw}"] = overall_score
-                result[f"academic_prod_compare_{tw}"] = academic_prod_compare
-                result[f"academic_impact_compare_{tw}"] = academic_impact_compare
-                result[f"overall_score_compare_{tw}"] = overall_score_compare
-                result[f"academic_prod_diff_{tw}"] = academic_prod_diff
-                result[f"academic_impact_diff_{tw}"] = academic_impact_diff
-                result[f"overall_score_diff_{tw}"] = overall_score_diff
+                row[f"academic_prod_{tw}"] = academic_prod
+                row[f"academic_impact_{tw}"] = academic_impact
+                row[f"overall_score_{tw}"] = overall_score
+                row[f"academic_prod_compare_{tw}"] = academic_prod_compare
+                row[f"academic_impact_compare_{tw}"] = academic_impact_compare
+                row[f"overall_score_compare_{tw}"] = overall_score_compare
+                row[f"academic_prod_diff_{tw}"] = academic_prod_diff
+                row[f"academic_impact_diff_{tw}"] = academic_impact_diff
+                row[f"overall_score_diff_{tw}"] = overall_score_diff
 
             # 计算成长模式
-            result["growth_pattern"] = self.calc_growth_pattern(overall_score_diff_0=result["overall_score_diff_0"],
-                                                                overall_score_diff_1=result["overall_score_diff_1"])
+            row["growth_pattern"] = self.calc_growth_pattern(overall_score_diff_0=row["overall_score_diff_0"],
+                                                             overall_score_diff_1=row["overall_score_diff_1"])
+            results.append(row)
 
-            results.append(result)
-
-        data = []
-        for result in results:
-            entity = ScholarDifferenceAnalysisEntity(**result)
-            data.append(entity.model_dump(mode="json", by_alias=True))
-        self.save_to_excel(pd.DataFrame(data))
+        self.export_to_excel(results, clazz=ScholarDifferenceAnalysisEntity)
 
 
 if __name__ == "__main__":
-    _input_file0 = DATASET_DIR.joinpath("S2.1-学者基本信息.xlsx")
-    _input_file1 = OUTPUT_DIR.joinpath(ScholarBasicMetric.__tbl_name__ + ".xlsx")
+    _input_file0 = DATASET_DIR.joinpath("S2.2-学者关联信息表-对照分组.xlsx")
+    _input_file1 = OUTPUT_DIR.joinpath(ScholarBasicMetricIndex.__tbl_name__ + ".xlsx")
     _metric = ScholarDifferenceAnalysis(_input_file0, data_path=_input_file1)
     _metric.calc()
