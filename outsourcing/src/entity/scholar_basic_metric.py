@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
-from matplotlib.font_manager import weight_dict
 from pydantic import BaseModel, Field
 from pathlib import Path
 from config import TIME_WINDOW_0_END, TIME_WINDOW_1_END, TIME_WINDOW_0_START, TIME_WINDOW_1_START
@@ -36,7 +35,7 @@ class DataType(object):
 
 
 class ScholarBasicMetric(AbstractBase):
-    __tbl_name__ = "指标计算（2015-2024年）"
+    __tbl_name__ = f"指标计算（{TIME_WINDOW_0_START}-{TIME_WINDOW_1_END}年）"
 
     def __init__(self, basic_info_path: Path,
                  data_paper_path: Path, data_patent_path: Path, **kwargs):
@@ -254,11 +253,12 @@ class ScholarBasicMetric(AbstractBase):
 
         # 计算一级指标
         df_data_with_weight["学术生产力"] = 0
-        for column in columns[0:3]:
+        for column in ["通讯作者论文数（A1）", "专利族数量（A2）", "第一发明人授权专利数量（A3）"]:
             df_data_with_weight["学术生产力"] = df_data_with_weight["学术生产力"] + df_data_with_weight[f"score_{column}"].values
 
         df_data_with_weight["学术影响力"] = 0
-        for column in columns[3:]:
+        for column in ["论文篇均被引频次（B1）", "单篇最高被引频次（B2）",
+                       "前10%高影响力期刊或会议通讯作者论文数量占比（B3）", "专利被引频次（B4）"]:
             df_data_with_weight["学术影响力"] = df_data_with_weight["学术生产力"] + df_data_with_weight[f"score_{column}"].values
 
         df_data_with_weight["综合分数"] = \
