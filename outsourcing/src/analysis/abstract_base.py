@@ -4,7 +4,7 @@
 # @time: 2025/7/26 10:50
 # @function:
 import pandas as pd
-from typing import List, overload
+from typing import List, overload, Union
 from dataclasses_json import DataClassJsonMixin
 from pandas import DataFrame
 from config import TIME_WINDOW_1_END, OUTPUT_DIR
@@ -12,6 +12,18 @@ from config import TIME_WINDOW_1_END, OUTPUT_DIR
 
 class AbstractBase(object):
     __tbl_name__ = ""
+
+    @staticmethod
+    def calc_citations_per_paper(df: pd.DataFrame, start_year: int, end_year: int, verbose: bool = False) -> pd.DataFrame:
+        """
+        对每篇论文按年份列求和，得到每篇论文在时间窗口内的总被引次数
+        """
+        df_sub = df[(start_year <= df["Publication Year"]) & (df["Publication Year"] <= end_year)]
+        years = list(str(year) for year in range(start_year, end_year + 1))
+        sum_citations_per_paper = df_sub[years].sum(axis=1)
+        if verbose:
+         print(f"计算每篇论文在时间窗口内的总被引次数：年份={years},每篇文章总被引次数=\n{sum_citations_per_paper}")
+        return sum_citations_per_paper
 
     @staticmethod
     def calc_h_index(citations: List[int]) -> int:
@@ -58,7 +70,7 @@ class AbstractBase(object):
         return df
 
     @classmethod
-    def _save_to_excel(cls, df: DataFrame, save_file: str = None):
+    def save_to_excel(cls, df: DataFrame, save_file: str = None):
         # 保存excel
         if save_file is None:
             save_file = cls.__tbl_name__
@@ -70,10 +82,13 @@ class AbstractBase(object):
         print(f"Saved to {output_file}")
 
     @classmethod
-    def save_to_excel(cls, results: List[dict], clazz: type[DataClassJsonMixin], save_file: str = None):
+    def export_to_excel(cls, results: Union[List[dict], DataFrame],
+                        clazz: type[DataClassJsonMixin], save_file: str = None):
         """
         中英文字段映射后写入excel
         """
+        if isinstance(results, DataFrame):
+            results = results.to_dict(orient="records")
         # 转换为中文字段名
         data = []
         for result in results:
@@ -81,4 +96,4 @@ class AbstractBase(object):
             print(entity)
             data.append(entity.to_dict())
         df_new = pd.DataFrame(data)
-        cls._save_to_excel(df_new, save_file=save_file)
+        cls.save_to_excel(df_new, save_file=save_file)

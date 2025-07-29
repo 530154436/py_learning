@@ -159,12 +159,6 @@ class ScholarDifferenceAnalysis(AbstractBase):
 
 
 if __name__ == "__main__":
-    # 设置 Pandas 打印选项
-    pd.set_option('display.max_rows', 100)  # 显示所有行
-    pd.set_option('display.max_columns', None)  # 显示所有列
-    pd.set_option('display.width', 2000)  # 不折叠单元格
-    pd.set_option('display.max_colwidth', None)  # 显示完整的单元格内容
-
     _input_file0 = DATASET_DIR.joinpath("S2.1-学者基本信息.xlsx")
     _input_file1 = OUTPUT_DIR.joinpath(ScholarBasicMetric.__tbl_name__ + ".xlsx")
     _metric = ScholarDifferenceAnalysis(_input_file0, data_path=_input_file1)

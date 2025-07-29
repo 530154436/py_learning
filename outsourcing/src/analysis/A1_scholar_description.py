@@ -6,12 +6,12 @@ from dataclasses import dataclass, field
 from dataclasses_json import config
 from config import TIME_WINDOW_1_END, TIME_WINDOW_0_END, TIME_WINDOW_0_START, CURRENT_YEAR
 from analysis.abstract_base import AbstractBase
-from analysis.scholar_base import ScholarIdNameEntity
+from analysis.scholar_base import ScholarIdGroupEntity
 from utils.pd_common_util import contains_in
 
 
 @dataclass
-class ScholarDescriptionEntity(ScholarIdNameEntity):
+class ScholarDescriptionEntity(ScholarIdGroupEntity):
     """
     学者描述信息（包含统计指标）
     """
@@ -39,16 +39,6 @@ class ScholarDescription(AbstractBase):
         super().__init__()
         self.basic_info_path = basic_info_path
         self.data_paper_path = data_paper_path
-
-    @staticmethod
-    def calc_citations_per_paper(df: pd.DataFrame, start_year: int, end_year: int) -> pd.DataFrame:
-        """
-        对每篇论文按年份列求和，得到每篇论文在时间窗口内的总被引次数
-        """
-        df_sub = df[df["Publication Year"] <= end_year]
-        years = list(str(year) for year in range(start_year, end_year + 1))
-        sum_citations_per_paper = df_sub[years].sum(axis=1)
-        return sum_citations_per_paper
 
     def calc_one_in_paper(self, df: pd.DataFrame) -> dict:
         """
@@ -156,7 +146,7 @@ class ScholarDescription(AbstractBase):
             result: dict = self.calc_one_in_paper(df_data_subset.copy())
             row.update(result)
             results.append(row)
-        self.save_to_excel(results, clazz=ScholarDescriptionEntity)
+        self.export_to_excel(results, clazz=ScholarDescriptionEntity)
 
 
 if __name__ == "__main__":
