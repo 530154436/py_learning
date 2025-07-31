@@ -28,8 +28,14 @@ class ScholarDescriptionEntity(ScholarIdGroupEntity):
     total_meeting_pub_10_years: int = field(metadata=config(field_name="10年会议论文总发文量"))
     total_preprint_pub_10_years: int = field(metadata=config(field_name="10年预印本总发文量"))
     total_pub_until_tw_0_end: int = field(metadata=config(field_name=f"{TIME_WINDOW_0_END}年之前总发文量"))
-    total_cits_until_tw_0_end: int = field(metadata=config(field_name=f"{TIME_WINDOW_0_END}年之前总被引频次"))
-    total_cits_per_paper_until_tw_0_end: int = field(metadata=config(field_name=f"{TIME_WINDOW_0_END}年之前篇均被引频次"))
+    total_cits_until_tw_0_end: int = field(metadata=config(field_name=f"{TIME_WINDOW_0_END}年之前论文总被引频次"))
+    avg_cits_per_paper_until_tw_0_end: int = field(metadata=config(field_name=f"{TIME_WINDOW_0_END}年之前论文篇均被引频次"))
+
+    total_cits_10_years: int = field(metadata=config(field_name="10年论文总被引频次"))
+    avg_cits_10_years: float = field(metadata=config(field_name="10年论文篇均被引频次"))
+    total_corr_author_papers_10_years: int = field(metadata=config(field_name="10年通讯作者论文总数"))
+    total_cits_corr_author_papers_10_years: int = field(metadata=config(field_name="10年通讯作者论文总被引频次"))
+    avg_cits_corr_author_papers_10_years: float = field(metadata=config(field_name="10年通讯作者论文篇均被引频次"))
 
 
 class ScholarDescription(AbstractBase):
@@ -109,8 +115,40 @@ class ScholarDescription(AbstractBase):
 
         # 12、2019年之前篇均被引频次
         sum_citations_per_paper = self.calc_citations_per_paper(df, start_year=1900, end_year=TIME_WINDOW_0_END)
-        total_cits_per_paper_until_tw_0_end = sum_citations_per_paper.mean()
-        print(f"{TIME_WINDOW_0_END}年之前总被引频次:", total_cits_per_paper_until_tw_0_end)
+        avg_cits_per_paper_until_tw_0_end = round(sum_citations_per_paper.mean(), ndigits=2)
+        print(f"{TIME_WINDOW_0_END}年之前篇均被引频次:", avg_cits_per_paper_until_tw_0_end)
+
+        # 13、10年论文总被引频次
+        sum_citations_per_paper = self.calc_citations_per_paper(df, start_year=TIME_WINDOW_0_END, end_year=TIME_WINDOW_1_END)
+        total_cits_10_years = sum_citations_per_paper.sum()
+        print("10年论文总被引频次:", total_cits_10_years)
+        
+        # 14、10年论文篇均被引频次
+        sum_citations_per_paper = self.calc_citations_per_paper(df, start_year=TIME_WINDOW_0_END, end_year=TIME_WINDOW_1_END)
+        avg_cits_10_years = round(sum_citations_per_paper.mean(), ndigits=2)
+        print("10年论文篇均被引频次:", avg_cits_10_years)
+
+        # 15、10年通讯作者论文数
+        mask_corr = (TIME_WINDOW_0_END <= df["Publication Year"]) & (df["Publication Year"] <= TIME_WINDOW_1_END) \
+            & (df["is_corresponding_author(except for math)"] == 1) \
+            & contains_in(df["Web of Science Index"],
+                              values=["Conference Proceedings Citation Index - Science (CPCI-S)",
+                                      "Science Citation Index Expanded (SCI-EXPANDED)",
+                                      "preprint"])
+            # & contains_in(df["Document Type"], ["Article", "Review"])
+        df_sub = df[mask_corr]
+        total_corr_author_papers_10_years = df_sub["UT (Unique WOS ID)"].nunique(dropna=True)
+        print("10年通讯作者论文数:", total_corr_author_papers_10_years)
+
+        # 16、10年通讯作者论文总被引频次
+        sum_citations_per_paper = self.calc_citations_per_paper(df_sub, start_year=TIME_WINDOW_0_END, end_year=TIME_WINDOW_1_END)
+        total_cits_corr_author_papers_10_years = sum_citations_per_paper.sum()
+        print("10年通讯作者论文数:", total_cits_corr_author_papers_10_years)
+
+        # 17、10年通讯作者论文篇均被引
+        sum_citations_per_paper = self.calc_citations_per_paper(df_sub, start_year=TIME_WINDOW_0_END, end_year=TIME_WINDOW_1_END)
+        avg_cits_corr_author_papers_10_years = round(sum_citations_per_paper.mean(), ndigits=2)
+        print("10年通讯作者论文篇均被引:", avg_cits_corr_author_papers_10_years)
 
         return dict(
             career_length=career_length,
@@ -124,7 +162,12 @@ class ScholarDescription(AbstractBase):
             total_preprint_pub_10_years=total_preprint_pub_10_years,
             total_pub_until_tw_0_end=total_pub_until_tw_0_end,
             total_cits_until_tw_0_end=total_cits_until_tw_0_end,
-            total_cits_per_paper_until_tw_0_end=total_cits_per_paper_until_tw_0_end,
+            avg_cits_per_paper_until_tw_0_end=avg_cits_per_paper_until_tw_0_end,
+            total_cits_10_years=total_cits_10_years,
+            avg_cits_10_years=avg_cits_10_years,
+            total_corr_author_papers_10_years=total_corr_author_papers_10_years,
+            total_cits_corr_author_papers_10_years=total_cits_corr_author_papers_10_years,
+            avg_cits_corr_author_papers_10_years=avg_cits_corr_author_papers_10_years,
         )
 
     def calc(self):
@@ -146,7 +189,7 @@ class ScholarDescription(AbstractBase):
             result: dict = self.calc_one_in_paper(df_data_subset.copy())
             row.update(result)
             results.append(row)
-        self.export_to_excel(results, clazz=ScholarDescriptionEntity)
+        self.export_to_excel(results, clazz=ScholarDescriptionEntity, fill_na=0)
 
 
 if __name__ == "__main__":

@@ -88,7 +88,7 @@ class ScholarBasicMetricRaw(AbstractBase):
         # 后5年：2020、2021、2022、2023、2024，这五年求和；每篇被引用总数求和/发表论文数
         df_sub = df[mask_corr]
         sum_citations_per_paper = self.calc_citations_per_paper(df_sub, start_year=start_year, end_year=end_year)
-        avg_citations_per_paper = sum_citations_per_paper.mean()
+        avg_citations_per_paper = round(sum_citations_per_paper.mean(), ndigits=2)
         print(f"论文篇均被引频次（B1）: {avg_citations_per_paper}")
 
         # 6、单篇最高被引频次（B2）：在给定时间窗口内（5年）累计总被引频次最高的通讯作者论文引用次数（通讯作者论文定义同第4点）

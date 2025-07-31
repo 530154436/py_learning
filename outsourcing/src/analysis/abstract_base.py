@@ -4,7 +4,7 @@
 # @time: 2025/7/26 10:50
 # @function:
 import pandas as pd
-from typing import List, overload, Union
+from typing import List, Union, Any
 from dataclasses_json import DataClassJsonMixin
 from pandas import DataFrame
 from config import TIME_WINDOW_1_END, OUTPUT_DIR
@@ -83,7 +83,8 @@ class AbstractBase(object):
 
     @classmethod
     def export_to_excel(cls, results: Union[List[dict], DataFrame],
-                        clazz: type[DataClassJsonMixin], save_file: str = None):
+                        clazz: type[DataClassJsonMixin], save_file: str = None,
+                        fill_na: Any = None):
         """
         中英文字段映射后写入excel
         """
@@ -96,4 +97,6 @@ class AbstractBase(object):
             print(entity)
             data.append(entity.to_dict())
         df_new = pd.DataFrame(data)
+        if fill_na:
+            df_new.fillna(value=fill_na, inplace=True)
         cls.save_to_excel(df_new, save_file=save_file)

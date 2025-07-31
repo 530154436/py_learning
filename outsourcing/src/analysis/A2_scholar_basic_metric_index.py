@@ -53,10 +53,10 @@ class ScholarBasicMetricIndex(AbstractBase):
             if _max == _min:
                 df_data_with_w[f"归一化_{column}"] = 0.0  # 所有值相同，归一化为0
             else:
-                df_data_with_w[f"归一化_{column}"] = (df_data_with_w[column] - _min) / (_max - _min)
+                df_data_with_w[f"归一化_{column}"] = round((df_data_with_w[column] - _min) / (_max - _min), ndigits=4)
 
         for column in IndexSet.ALL_INDICATORS:
-            df_data_with_w[f"得分_{column}"] = df_data_with_w[f"权重_{column}"] * df_data_with_w[f"归一化_{column}"]
+            df_data_with_w[f"得分_{column}"] = round(df_data_with_w[f"权重_{column}"] * df_data_with_w[f"归一化_{column}"], ndigits=2)
         print(df_data_with_w)
 
         # 计算一级指标
