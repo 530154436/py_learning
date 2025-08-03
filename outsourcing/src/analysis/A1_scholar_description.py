@@ -29,7 +29,7 @@ class ScholarDescriptionEntity(ScholarIdGroupEntity):
     total_preprint_pub_10_years: int = field(metadata=config(field_name="10年预印本总发文量"))
     total_pub_until_tw_0_end: int = field(metadata=config(field_name=f"{TIME_WINDOW_0_END}年之前总发文量"))
     total_cits_until_tw_0_end: int = field(metadata=config(field_name=f"{TIME_WINDOW_0_END}年之前论文总被引频次"))
-    avg_cits_per_paper_until_tw_0_end: int = field(metadata=config(field_name=f"{TIME_WINDOW_0_END}年之前论文篇均被引频次"))
+    avg_cits_per_paper_until_tw_0_end: float = field(metadata=config(field_name=f"{TIME_WINDOW_0_END}年之前论文篇均被引频次"))
 
     total_cits_10_years: int = field(metadata=config(field_name="10年论文总被引频次"))
     avg_cits_10_years: float = field(metadata=config(field_name="10年论文篇均被引频次"))
@@ -90,9 +90,11 @@ class ScholarDescription(AbstractBase):
         print(f"10年SCI论文总发文量:", total_sci_pub_10_years)
 
         # 8、10年会议论文总发文量：统计Web of Science Index中的Conference Proceedings Citation Index - Science (CPCI-S)，即会议论文
-        # TODO: （多个会议的情况，id+优先级SCI-E>CPCI-S>preprint）
         mask = mask_10_year \
-            & contains_in(df["Web of Science Index"], ["Conference Proceedings Citation Index - Science (CPCI-S)"]) \
+            & (
+                 contains_in(df["Web of Science Index"], ["Conference Proceedings Citation Index - Science (CPCI-S)"]) \
+                 & contains_in(df["Document Type"], ["Proceedings Paper"])
+               ) \
             & (~contains_in(df["Web of Science Index"], ["Science Citation Index Expanded (SCI-EXPANDED)"]))
         total_meeting_pub_10_years = df[mask]["UT (Unique WOS ID)"].nunique(dropna=True)
         print(f"10年会议论文总发文量:", total_meeting_pub_10_years)
@@ -104,49 +106,47 @@ class ScholarDescription(AbstractBase):
         print(f"10年预印本总发文量:", total_preprint_pub_10_years)
 
         # 10、2019年之前总发文量
-        mask = df["Publication Year"] <= TIME_WINDOW_0_END
-        total_pub_until_tw_0_end = df[mask]["UT (Unique WOS ID)"].nunique(dropna=True)
+        df_sub = df[df["Publication Year"] <= TIME_WINDOW_0_END]
+        total_pub_until_tw_0_end = df_sub["UT (Unique WOS ID)"].nunique(dropna=True)
         print(f"{TIME_WINDOW_0_END}年之前总发文量:", total_pub_until_tw_0_end)
 
         # 11、2019年之前总被引频次
-        sum_citations_per_paper = self.calc_citations_per_paper(df, start_year=1900, end_year=TIME_WINDOW_0_END)
+        sum_citations_per_paper = self.calc_citations_per_paper(df_sub, start_year=1900, end_year=TIME_WINDOW_0_END)
         total_cits_until_tw_0_end = sum_citations_per_paper.sum()
         print(f"{TIME_WINDOW_0_END}年之前总被引频次:", total_cits_until_tw_0_end)
 
         # 12、2019年之前篇均被引频次
-        sum_citations_per_paper = self.calc_citations_per_paper(df, start_year=1900, end_year=TIME_WINDOW_0_END)
-        avg_cits_per_paper_until_tw_0_end = round(sum_citations_per_paper.mean(), ndigits=2)
+        avg_cits_per_paper_until_tw_0_end = sum_citations_per_paper.mean()
         print(f"{TIME_WINDOW_0_END}年之前篇均被引频次:", avg_cits_per_paper_until_tw_0_end)
 
         # 13、10年论文总被引频次
-        sum_citations_per_paper = self.calc_citations_per_paper(df, start_year=TIME_WINDOW_0_END, end_year=TIME_WINDOW_1_END)
+        df_sub = df[(df["Publication Year"] >= TIME_WINDOW_0_START) & (df["Publication Year"] <= TIME_WINDOW_1_END)]
+        sum_citations_per_paper = self.calc_citations_per_paper(df_sub, start_year=TIME_WINDOW_0_START, end_year=TIME_WINDOW_1_END)
         total_cits_10_years = sum_citations_per_paper.sum()
         print("10年论文总被引频次:", total_cits_10_years)
         
         # 14、10年论文篇均被引频次
-        sum_citations_per_paper = self.calc_citations_per_paper(df, start_year=TIME_WINDOW_0_END, end_year=TIME_WINDOW_1_END)
         avg_cits_10_years = round(sum_citations_per_paper.mean(), ndigits=2)
         print("10年论文篇均被引频次:", avg_cits_10_years)
 
         # 15、10年通讯作者论文数
-        mask_corr = (TIME_WINDOW_0_END <= df["Publication Year"]) & (df["Publication Year"] <= TIME_WINDOW_1_END) \
+        mask_corr = (TIME_WINDOW_0_START <= df["Publication Year"]) & (df["Publication Year"] <= TIME_WINDOW_1_END) \
             & (df["is_corresponding_author(except for math)"] == 1) \
             & contains_in(df["Web of Science Index"],
                               values=["Conference Proceedings Citation Index - Science (CPCI-S)",
                                       "Science Citation Index Expanded (SCI-EXPANDED)",
-                                      "preprint"])
-            # & contains_in(df["Document Type"], ["Article", "Review"])
+                                      "preprint"])\
+            & contains_in(df["Document Type"], ["Article", "Review", "Proceedings Paper", "preprint"])
         df_sub = df[mask_corr]
         total_corr_author_papers_10_years = df_sub["UT (Unique WOS ID)"].nunique(dropna=True)
         print("10年通讯作者论文数:", total_corr_author_papers_10_years)
 
         # 16、10年通讯作者论文总被引频次
-        sum_citations_per_paper = self.calc_citations_per_paper(df_sub, start_year=TIME_WINDOW_0_END, end_year=TIME_WINDOW_1_END)
+        sum_citations_per_paper = self.calc_citations_per_paper(df_sub, start_year=TIME_WINDOW_0_START, end_year=TIME_WINDOW_1_END)
         total_cits_corr_author_papers_10_years = sum_citations_per_paper.sum()
         print("10年通讯作者论文数:", total_cits_corr_author_papers_10_years)
 
         # 17、10年通讯作者论文篇均被引
-        sum_citations_per_paper = self.calc_citations_per_paper(df_sub, start_year=TIME_WINDOW_0_END, end_year=TIME_WINDOW_1_END)
         avg_cits_corr_author_papers_10_years = round(sum_citations_per_paper.mean(), ndigits=2)
         print("10年通讯作者论文篇均被引:", avg_cits_corr_author_papers_10_years)
 
