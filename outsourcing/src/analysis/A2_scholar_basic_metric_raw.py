@@ -65,9 +65,11 @@ class ScholarBasicMetricRaw(AbstractBase):
 
         # 3、会议论文数：统计学者在时间窗口内发表会议论文数
         mask = mask_time_window \
-            & contains_in(df["Web of Science Index"], ["Conference Proceedings Citation Index - Science (CPCI-S)"]) \
+            & (
+                  contains_in(df["Web of Science Index"], ["Conference Proceedings Citation Index - Science (CPCI-S)"]) \
+                  & contains_in(df["Document Type"], ["Proceedings Paper"])
+            ) \
             & (~contains_in(df["Web of Science Index"], ["Science Citation Index Expanded (SCI-EXPANDED)"]))
-            # & contains_in(df["Document Type"], ["Article", "Review"])  # 加上这个条件都是0
         total_meeting_pub = df[mask]["UT (Unique WOS ID)"].nunique(dropna=True)
         print("会议论文数:", total_meeting_pub)
 
@@ -77,10 +79,9 @@ class ScholarBasicMetricRaw(AbstractBase):
             & contains_in(df["Web of Science Index"],
                               values=["Conference Proceedings Citation Index - Science (CPCI-S)",
                                       "Science Citation Index Expanded (SCI-EXPANDED)",
-                                      "preprint"])
-            # & contains_in(df["Document Type"], ["Article", "Review"])
+                                      "preprint"]) \
+            & contains_in(df["Document Type"], ["Article", "Review", "Proceedings Paper", "preprint"])
         total_corresponding_author_papers = df[mask_corr]["UT (Unique WOS ID)"].nunique(dropna=True)
-        print("通讯作者论文数（SCI/会议/预印本）:", total_corresponding_author_papers)
 
         # 5、论文篇均被引频次（B1）：通讯作者论文篇均被引频次（通讯作者论文定义同第4点）
         # 计算方式:
