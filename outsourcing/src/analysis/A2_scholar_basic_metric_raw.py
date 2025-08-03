@@ -22,6 +22,8 @@ class ScholarBasicMetricRawEntity(ScholarIdGroupEntity):
     total_pub: int = field(metadata=config(field_name="总发文量", metadata={"description": "统计学者在时间窗口内发表论文总数"}))
     total_sci_pub: int = field(metadata=config(field_name="SCI论文数", metadata={"description": "统计学者在时间窗口内发表SCI论文数"}))
     total_meeting_pub: int = field(metadata=config(field_name="会议论文数", metadata={"description": "统计学者在时间窗口内发表会议论文数"}))
+    top_10p_corr_paper_num: int = field(metadata=config(field_name="前10%高影响力期刊或会议通讯作者论文数量"))
+
     total_corresponding_author_papers: int = field(metadata=config(field_name="通讯作者论文数（A1）", metadata={"description": "学者在给定时间内作为通讯作者身份发表总论文数（SCI/会议/预印本）"}))
     patent_families_num: int = field(metadata=config(field_name="专利族数量（A2）", metadata={"description": "学者在给定时间内拥有的DWPI同族专利数量"}))
     patent_first_inventor_patent_hum: int = field(metadata=config(field_name="第一发明人授权专利数量（A3）", metadata={"description": "学者在给定时间内作为第一发明人授权的发明专利数量"}))
@@ -77,13 +79,21 @@ class ScholarBasicMetricRaw(AbstractBase):
         mask_corr = mask_time_window \
             & (df["is_corresponding_author(except for math)"] == 1) \
             & contains_in(df["Web of Science Index"],
-                              values=["Conference Proceedings Citation Index - Science (CPCI-S)",
-                                      "Science Citation Index Expanded (SCI-EXPANDED)",
-                                      "preprint"]) \
+                          values=["Conference Proceedings Citation Index - Science (CPCI-S)",
+                                  "Science Citation Index Expanded (SCI-EXPANDED)",
+                                  "preprint"]) \
             & contains_in(df["Document Type"], ["Article", "Review", "Proceedings Paper", "preprint"])
         total_corresponding_author_papers = df[mask_corr]["UT (Unique WOS ID)"].nunique(dropna=True)
+        print(f"通讯作者论文数（A1）：: {total_corresponding_author_papers}")
 
-        # 5、论文篇均被引频次（B1）：通讯作者论文篇均被引频次（通讯作者论文定义同第4点）
+        # 5、前10%高影响力期刊或会议通讯作者论文数量
+        # top_10p_corr_paper: int = field(metadata=config(field_name="前10%高影响力期刊或会议通讯作者论文数量"))
+        mask = mask_corr \
+               & (df["is_top_journal_confer（1=yes,0=no,preprint=preprint,other=null）"] == 1)
+        top_10p_corr_paper_num = df[mask]["UT (Unique WOS ID)"].nunique(dropna=True)
+        print(f"前10%高影响力期刊或会议通讯作者论文数量：: {top_10p_corr_paper_num}")
+
+        # 6、论文篇均被引频次（B1）：通讯作者论文篇均被引频次（通讯作者论文定义同第4点）
         # 计算方式:
         # 前5年：2015、2016、2017、2018、2019，这五年求和；每篇被引用总数求和/发表论文数
         # 后5年：2020、2021、2022、2023、2024，这五年求和；每篇被引用总数求和/发表论文数
@@ -92,29 +102,23 @@ class ScholarBasicMetricRaw(AbstractBase):
         avg_citations_per_paper = round(sum_citations_per_paper.mean(), ndigits=2)
         print(f"论文篇均被引频次（B1）: {avg_citations_per_paper}")
 
-        # 6、单篇最高被引频次（B2）：在给定时间窗口内（5年）累计总被引频次最高的通讯作者论文引用次数（通讯作者论文定义同第4点）
+        # 7、单篇最高被引频次（B2）：在给定时间窗口内（5年）累计总被引频次最高的通讯作者论文引用次数（通讯作者论文定义同第4点）
         max_citations_single_paper = sum_citations_per_paper.max()
         print("单篇最高被引频次（B2）:", max_citations_single_paper)
 
-        # 7、前10%高影响力期刊或会议通讯作者论文数量占比（B3）：各领域JCR前10%期刊或重要国际会议通讯作者论文数量占比
+        # 8、前10%高影响力期刊或会议通讯作者论文数量占比（B3）：各领域JCR前10%期刊或重要国际会议通讯作者论文数量占比
         # 根据is_corresponding_author(except for math)和is_top_journal_confer两个字段筛选出研究者作为通讯作者且发表在顶级期刊或会议上的论文。
-        mask = mask_time_window\
-            & (df["is_corresponding_author(except for math)"] == 1) \
-            & (df["is_top_journal_confer（1=yes,0=no,other=preprint）"] == 1) \
-            & contains_in(df["Web of Science Index"],
-                              values=["Conference Proceedings Citation Index - Science (CPCI-S)",
-                                      "Science Citation Index Expanded (SCI-EXPANDED)"]) \
-            & contains_in(df["Document Type"], ["Article", "Review"])
-        top_10p_corr_paper_num = df[mask]["UT (Unique WOS ID)"].nunique(dropna=True)
-        top_10p_corr_total_pub = total_sci_pub + total_meeting_pub
-        top_10p_corr_paper_ratio = round(top_10p_corr_paper_num / top_10p_corr_total_pub, 3)
-        print("前10%高影响力期刊或会议通讯作者论文数量/总论文数:", top_10p_corr_paper_num, top_10p_corr_total_pub)
+        top_10p_corr_paper_ratio = 0
+        if total_corresponding_author_papers > 0:
+            top_10p_corr_paper_ratio = round(top_10p_corr_paper_num / total_corresponding_author_papers, 3)
+        print("前10%高影响力期刊或会议通讯作者论文数量/总论文数:", top_10p_corr_paper_num, total_corresponding_author_papers)
         print("前10%高影响力期刊或会议通讯作者论文数量占比（B3）:", top_10p_corr_paper_ratio)
 
         return dict(
             total_pub=total_pub,
             total_sci_pub=total_sci_pub,
             total_meeting_pub=total_meeting_pub,
+            top_10p_corr_paper_num=top_10p_corr_paper_num,
             total_corresponding_author_papers=total_corresponding_author_papers,
             avg_citations_per_paper=avg_citations_per_paper,
             max_citations_single_paper=0 if pd.isnull(max_citations_single_paper) else int(max_citations_single_paper),
@@ -129,22 +133,14 @@ class ScholarBasicMetricRaw(AbstractBase):
         # 申请年：用于筛选给定时间内的专利（例如，获奖前5年或获奖后5年）。
         df_sub: pd.DataFrame = df.loc[mask_time_window]
 
-        # 2、第一发明人授权专利数量（A3）：学者在给定时间内作为第一发明人授权的发明专利数量
+        # 1、第一发明人授权专利数量（A3）：学者在给定时间内作为第一发明人授权的发明专利数量
         mask = (df_sub["第一发明人（是-1，否-0）"] == 1) \
             & (df_sub["专利类型（申请-0，授权-1）"] == 1)
         patent_first_inventor_patent_hum = df_sub[mask]["公开号"].nunique(dropna=True)
         print("第一发明人授权专利数量（A3）:", patent_first_inventor_patent_hum)
 
-        # 3、专利被引次数（B4）：指专利族截至数据采集时间的总被引用次数
-        # 施引专利计数 - DPCI：表示该专利族被引用的总次数（DPCI 是 Derwent Patent Citation Index 的缩写，提供标准化引用数据）。
-        # DWPI 入藏号：用于关联专利族（B4是基于专利族计算的，因此同一族的所有成员共享同一个被引次数）。
-        df_res = df_sub.drop_duplicates(subset=["公开号"])
-        patent_citations = df_res["施引专利计数 - DPCI"].fillna(0).sum()
-        print("专利被引次数（B4）:", patent_first_inventor_patent_hum)
-
         return dict(
-            patent_first_inventor_patent_hum=patent_first_inventor_patent_hum,
-            patent_citations=patent_citations,
+            patent_first_inventor_patent_hum=patent_first_inventor_patent_hum
         )
 
     def calc_one_in_patent_famailies(self, df: pd.DataFrame, start_year: int, end_year: int) -> dict:
@@ -156,13 +152,17 @@ class ScholarBasicMetricRaw(AbstractBase):
         df_sub: pd.DataFrame = df.loc[mask_time_window]
 
         # 1、专利族数量（A2）：学者在给定时间内拥有的DWPI同族专利数量
-        # DWPI 入藏号：每个专利族在DWPI中的唯一标识符（Accession Number），用于区分不同的专利族。
-        # DWPI 同族专利成员计数：表示该专利族包含的成员专利数量，但A2是计数专利族本身（不是成员数量），因此需基于DWPI 入藏号去重计数。
         patent_families_num = df_sub["公开号"].nunique(dropna=True)
         print("专利族数量（A2）:", patent_families_num)
 
+        # 2、专利被引次数（B4）：指专利族截至数据采集时间的总被引用次数
+        df_sub = df[mask_time_window].drop_duplicates(subset=["公开号"])
+        patent_citations = df_sub["施引专利计数 - DPCI"].fillna(0).sum()
+        print("专利被引次数（B4）:", patent_citations)
+
         return dict(
-            patent_families_num=patent_families_num
+            patent_families_num=patent_families_num,
+            patent_citations=patent_citations
         )
 
     def calc_by_data_type(self, data_type: str) -> pd.DataFrame:
@@ -226,8 +226,8 @@ class ScholarBasicMetricRaw(AbstractBase):
 
 if __name__ == "__main__":
     _input_file0 = DATASET_DIR.joinpath("S2.1-学者基本信息.xlsx")
-    _input_file1 = DATASET_DIR.joinpath("S1.1-目标数据表-249人获奖前后10年论文数据汇总.xlsx")
-    _input_file2 = DATASET_DIR.joinpath("S1.2-目标数据集-249人获奖前后10年专利数据汇总.xlsx")
+    _input_file1 = DATASET_DIR.joinpath("S0.1-原始数据表-249人学术生涯论文数据汇总.xlsx")
+    _input_file2 = DATASET_DIR.joinpath("S0.2-原始数据表-249人学术生涯专利数据汇总.xlsx")
     _input_file3 = DATASET_DIR.joinpath("S2.3-指标计算权重值.xlsx")
     _metric = ScholarBasicMetricRaw(_input_file0, data_paper_path=_input_file1,
                                     data_patent_path=_input_file2, data_weight_path=_input_file3)
