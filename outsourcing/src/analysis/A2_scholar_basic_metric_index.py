@@ -46,25 +46,34 @@ class ScholarBasicMetricIndex(AbstractBase):
         df_data_with_w = pd.merge(df_data, df_weight, on=["研究类型（1=基础科学，0=工程技术，2=前沿交叉）"], how="left")
         print(df_data_with_w)
 
-        # 归一化（min-max）、计算权重*归一化值
-        for column in IndexSet.ALL_INDICATORS:
-            _max = df_data_with_w[column].max()
-            _min = df_data_with_w[column].min()
-            if _max == _min:
-                df_data_with_w[f"归一化_{column}"] = 0.0  # 所有值相同，归一化为0
-            else:
-                df_data_with_w[f"归一化_{column}"] = round((df_data_with_w[column] - _min) / (_max - _min), ndigits=4)
 
+        # 按领域分组
+        data = []
+        for _, chunk in df_data_with_w.groupby(["研究领域", "时间窗口（0=获奖前5年，1=获奖后5年）"]):
+            # 归一化（min-max）、计算权重*归一化值
+            for column in IndexSet.ALL_INDICATORS:
+                _max = chunk[column].max()
+                _min = chunk[column].min()
+                if _max == _min:
+                    chunk[f"归一化_{column}"] = 0.0  # 所有值相同，归一化为0
+                else:
+                    chunk[f"归一化_{column}"] = (chunk[column] - _min) / (_max - _min)
+            data.append(chunk)
+
+        df_result = pd.concat(data)
         for column in IndexSet.ALL_INDICATORS:
-            df_data_with_w[f"得分_{column}"] = round(df_data_with_w[f"权重_{column}"] * df_data_with_w[f"归一化_{column}"], ndigits=2)
+            df_result[f"得分_{column}"] = df_result[f"权重_{column}"] * df_result[f"归一化_{column}"]
         print(df_data_with_w)
 
         # 计算一级指标
-        df_data_with_w["学术生产力"] = sum(df_data_with_w[f"得分_{col}"] for col in IndexSet.A_INDICATORS)
-        df_data_with_w["学术影响力"] = sum(df_data_with_w[f"得分_{col}"] for col in IndexSet.B_INDICATORS)
-        df_data_with_w["综合分数"] = df_data_with_w["学术生产力"] + df_data_with_w["学术影响力"]
-        print(df_data_with_w)
-        self.save_to_excel(df_data_with_w, save_file=f"{self.__tbl_name__}.xlsx")
+        df_result["学术生产力"] = sum(df_result[f"得分_{col}"] for col in IndexSet.A_INDICATORS)
+        df_result["学术影响力"] = sum(df_result[f"得分_{col}"] for col in IndexSet.B_INDICATORS)
+        df_result["综合分数"] = df_result["学术生产力"] + df_result["学术影响力"]
+
+        df_result = df_result.sort_values(by=["关联ID", "时间窗口（0=获奖前5年，1=获奖后5年）"],
+                                          ascending=[True, True])
+        print(df_result)
+        self.save_to_excel(df_result, save_file=f"{self.__tbl_name__}.xlsx")
 
 
 if __name__ == "__main__":

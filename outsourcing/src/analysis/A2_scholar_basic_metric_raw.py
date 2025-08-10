@@ -25,6 +25,7 @@ class ScholarBasicMetricRawEntity(ScholarIdGroupEntity):
     top_10p_corr_paper_num: int = field(metadata=config(field_name="前10%高影响力期刊或会议通讯作者论文数量"))
 
     total_corresponding_author_papers: int = field(metadata=config(field_name="通讯作者论文数（A1）", metadata={"description": "学者在给定时间内作为通讯作者身份发表总论文数（SCI/会议/预印本）"}))
+    total_corresponding_author_papers_no_pp: int = field(metadata=config(field_name="通讯作者论文数（不含预印本）", metadata={"description": "学者在给定时间内作为通讯作者身份发表总论文数（SCI/会议）"}))
     patent_families_num: int = field(metadata=config(field_name="专利族数量（A2）", metadata={"description": "学者在给定时间内拥有的DWPI同族专利数量"}))
     patent_first_inventor_patent_hum: int = field(metadata=config(field_name="第一发明人授权专利数量（A3）", metadata={"description": "学者在给定时间内作为第一发明人授权的发明专利数量"}))
     avg_citations_per_paper: float = field(metadata=config(field_name="论文篇均被引频次（B1）", metadata={"description": "通讯作者论文篇均被引频次"}))
@@ -86,14 +87,24 @@ class ScholarBasicMetricRaw(AbstractBase):
         total_corresponding_author_papers = df[mask_corr]["UT (Unique WOS ID)"].nunique(dropna=True)
         print(f"通讯作者论文数（A1）：: {total_corresponding_author_papers}")
 
-        # 5、前10%高影响力期刊或会议通讯作者论文数量
+        # 5、通讯作者论文数（不含预印本）
+        mask_corr1 = mask_time_window \
+            & (df["is_corresponding_author(except for math)"] == 1) \
+            & contains_in(df["Web of Science Index"],
+                          values=["Conference Proceedings Citation Index - Science (CPCI-S)",
+                                  "Science Citation Index Expanded (SCI-EXPANDED)"]) \
+            & contains_in(df["Document Type"], ["Article", "Review", "Proceedings Paper", "preprint"])
+        total_corresponding_author_papers_no_pp = df[mask_corr1]["UT (Unique WOS ID)"].nunique(dropna=True)
+        print(f"通讯作者论文数（不含预印本）：: {total_corresponding_author_papers_no_pp}")
+
+        # 6、前10%高影响力期刊或会议通讯作者论文数量
         # top_10p_corr_paper: int = field(metadata=config(field_name="前10%高影响力期刊或会议通讯作者论文数量"))
         mask = mask_corr \
                & (df["is_top_journal_confer（1=yes,0=no,preprint=preprint,other=null）"] == 1)
         top_10p_corr_paper_num = df[mask]["UT (Unique WOS ID)"].nunique(dropna=True)
         print(f"前10%高影响力期刊或会议通讯作者论文数量：: {top_10p_corr_paper_num}")
 
-        # 6、论文篇均被引频次（B1）：通讯作者论文篇均被引频次（通讯作者论文定义同第4点）
+        # 7、论文篇均被引频次（B1）：通讯作者论文篇均被引频次（通讯作者论文定义同第4点）
         # 计算方式:
         # 前5年：2015、2016、2017、2018、2019，这五年求和；每篇被引用总数求和/发表论文数
         # 后5年：2020、2021、2022、2023、2024，这五年求和；每篇被引用总数求和/发表论文数
@@ -102,16 +113,16 @@ class ScholarBasicMetricRaw(AbstractBase):
         avg_citations_per_paper = round(sum_citations_per_paper.mean(), ndigits=2)
         print(f"论文篇均被引频次（B1）: {avg_citations_per_paper}")
 
-        # 7、单篇最高被引频次（B2）：在给定时间窗口内（5年）累计总被引频次最高的通讯作者论文引用次数（通讯作者论文定义同第4点）
+        # 8、单篇最高被引频次（B2）：在给定时间窗口内（5年）累计总被引频次最高的通讯作者论文引用次数（通讯作者论文定义同第4点）
         max_citations_single_paper = sum_citations_per_paper.max()
         print("单篇最高被引频次（B2）:", max_citations_single_paper)
 
-        # 8、前10%高影响力期刊或会议通讯作者论文数量占比（B3）：各领域JCR前10%期刊或重要国际会议通讯作者论文数量占比
+        # 9、前10%高影响力期刊或会议通讯作者论文数量占比（B3）：各领域JCR前10%期刊或重要国际会议通讯作者论文数量占比
         # 根据is_corresponding_author(except for math)和is_top_journal_confer两个字段筛选出研究者作为通讯作者且发表在顶级期刊或会议上的论文。
         top_10p_corr_paper_ratio = 0
         if total_corresponding_author_papers > 0:
-            top_10p_corr_paper_ratio = round(top_10p_corr_paper_num / total_corresponding_author_papers, 3)
-        print("前10%高影响力期刊或会议通讯作者论文数量/总论文数:", top_10p_corr_paper_num, total_corresponding_author_papers)
+            top_10p_corr_paper_ratio = round(top_10p_corr_paper_num / total_corresponding_author_papers_no_pp, 3)
+        print("前10%高影响力期刊或会议通讯作者论文数量/总论文数:", top_10p_corr_paper_num, total_corresponding_author_papers_no_pp)
         print("前10%高影响力期刊或会议通讯作者论文数量占比（B3）:", top_10p_corr_paper_ratio)
 
         return dict(
@@ -120,6 +131,7 @@ class ScholarBasicMetricRaw(AbstractBase):
             total_meeting_pub=total_meeting_pub,
             top_10p_corr_paper_num=top_10p_corr_paper_num,
             total_corresponding_author_papers=total_corresponding_author_papers,
+            total_corresponding_author_papers_no_pp=total_corresponding_author_papers_no_pp,
             avg_citations_per_paper=avg_citations_per_paper,
             max_citations_single_paper=0 if pd.isnull(max_citations_single_paper) else int(max_citations_single_paper),
             top_10p_corr_paper_ratio=top_10p_corr_paper_ratio,
