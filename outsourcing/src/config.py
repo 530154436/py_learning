@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime
 from pathlib import Path
+import pandas as pd
 
 BASE_DIR = Path(__file__).parent.parent
 DATASET_DIR = BASE_DIR.joinpath("data/dataset")
@@ -22,3 +23,8 @@ print(f"当前年份={CURRENT_YEAR}, 时间窗口="
 if not OUTPUT_DIR.exists():
     OUTPUT_DIR.mkdir(parents=True)
 
+# 设置 Pandas 打印选项
+pd.set_option('display.max_rows', 100)  # 显示所有行
+pd.set_option('display.max_columns', None)  # 显示所有列
+pd.set_option('display.width', 2000)  # 不折叠单元格
+pd.set_option('display.max_colwidth', 50)  # 显示完整的单元格内容

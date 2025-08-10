@@ -15,8 +15,8 @@ class GrowthPattern(object):
     czfhx: str = "成长放缓型"
 
 
-# 设置 Pandas 打印选项
-pd.set_option('display.max_rows', 100)  # 显示所有行
-pd.set_option('display.max_columns', None)  # 显示所有列
-pd.set_option('display.width', 2000)  # 不折叠单元格
-pd.set_option('display.max_colwidth', 50)  # 显示完整的单元格内容
+RESEARCH_TYPE_MAPPING = {
+    "0": "工程技术",
+    "1": "基础科学",
+    "2": "前沿交叉"
+}
