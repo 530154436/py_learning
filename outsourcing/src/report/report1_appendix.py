@@ -198,9 +198,9 @@ def appendix_3(doc: Document):
         # 第一层表头：时间窗口分组（仅合并“前5年”和“后5年”部分）
         # -----------------------------
         header_row1 = table.add_row().cells
-        header_row1[0].text = ""
-        header_row1[1].text = ""
-        header_row1[2].text = ""
+        header_row1[0].text = "序号"
+        header_row1[1].text = "获奖人姓名"
+        header_row1[2].text = "领域"
         # 第3-6列：获奖前5年差值 → 合并3列
         cell_pre = header_row1[3]
         cell_pre.merge(header_row1[4]).merge(header_row1[5])
@@ -213,16 +213,13 @@ def appendix_3(doc: Document):
         cell_post.text = "获奖后5年差值"
         for paragraph in cell_post.paragraphs:
             paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        header_row1[9].text = ""
+        header_row1[9].text = "成长模式"
         # -----------------------------
         # 第二层表头：具体指标名称
         # -----------------------------
         header_row2 = table.add_row().cells
-        header_row2[0].text = "序号"
         header_row2[0].merge(header_row1[0])
-        header_row2[1].text = "获奖人姓名"
         header_row2[1].merge(header_row1[1])
-        header_row2[2].text = "领域"
         header_row2[2].merge(header_row1[2])
         header_row2[3].text = "综合分数"
         header_row2[4].text = "学术生产力"
@@ -230,7 +227,6 @@ def appendix_3(doc: Document):
         header_row2[6].text = "综合分数"
         header_row2[7].text = "学术生产力"
         header_row2[8].text = "学术影响力"
-        header_row2[9].text = "成长模式"
         header_row2[9].merge(header_row1[9])
         return table
 
@@ -411,8 +407,8 @@ def add_all_appendix_tables():
         doc.tables[i] = merge_table_column(table, col_idx=0)  # 合并第 0 列（时间窗口列）
         set_table_column_font(table)
 
-    doc.save('1-附表.docx')
-    print("1-附表.docx")
+    doc.save('1-首届获奖人获奖前后学术能力量化评估综合报告-附表.docx')
+    print("1-首届获奖人获奖前后学术能力量化评估综合报告-附表.docx")
 
 
 if __name__ == '__main__':
