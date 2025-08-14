@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
+from typing import List
+
+import numpy as np
 import pandas as pd
 from docx import Document
-from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT, WD_ALIGN_VERTICAL
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.shared import Pt, Inches, Cm
-
+from pandas import DataFrame
+from scipy import stats
 from analysis import RESEARCH_TYPE_MAPPING
 from config import DATASET_DIR, OUTPUT_DIR
 from utils.doc_tpl_util import merge_table_column, set_table_column_font, set_heading_font_style
@@ -292,64 +295,113 @@ def appendix_4(doc: Document):
         # 第一层表头：时间窗口分组（仅合并“前5年”和“后5年”部分）
         # -----------------------------
         header_row1 = table.add_row().cells
-        header_row1[0].text = ""
-        header_row1[1].text = ""
-        header_row1[2].text = ""
-        header_row1[3].text = ""
+        header_row1[0].text = "配对样本：\r获奖后5年-\r获奖前5年"
+        header_row1[1].text = "均值差值"
+        header_row1[2].text = "标准差"
+        header_row1[3].text = "均值的标准误差"
         # 第3-6列：获奖前5年差值 → 合并3列
         cell = header_row1[4]
         cell.merge(header_row1[4]).merge(header_row1[5])
-        cell.text = "差分的95%\n置信区间"
+        cell.text = "差分的95%\r置信区间"
         for paragraph in cell.paragraphs:
             paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        header_row1[6].text = ""
-        header_row1[7].text = ""
-        header_row1[8].text = ""
+        header_row1[6].text = "t"
+        header_row1[7].text = "df"
+        header_row1[8].text = "Sig.(双侧)"
         # -----------------------------
         # 第二层表头：具体指标名称
         # -----------------------------
         header_row2 = table.add_row().cells
-        header_row2[0].text = "配对样本：获奖后5年-获奖前5年"
         header_row2[0].merge(header_row1[0])
-        header_row2[1].text = "均值差值"
         header_row2[1].merge(header_row1[1])
-        header_row2[2].text = "标准差"
         header_row2[2].merge(header_row1[2])
-        header_row2[3].text = "均值的标准误"
         header_row2[3].merge(header_row1[3])
         header_row2[4].text = "下限"
         header_row2[5].text = "上限"
-        header_row2[6].text = "t"
         header_row2[6].merge(header_row1[6])
-        header_row2[7].text = "df"
         header_row2[7].merge(header_row1[7])
-        header_row2[8].text = "Sig.(双侧)"
         header_row2[8].merge(header_row1[8])
         return table
 
-    def fill_table(table, df):
-        """ 填充表格数据
+    def calculate_stats(data: DataFrame):
+        """ 计算每位获奖人自身的“获奖前后变化” 置信区间和T检验
         """
-        pass
+        # 只保留获奖人（学者类型 = 1）
+        df_awardees = data[data['学者类型（获奖人=1，0=对照学者）'] == 1].copy()
+        df_awardees['综合分数变化'] = df_awardees['综合分数1'] - df_awardees['综合分数0']
+        df_awardees['学术生产力变化'] = df_awardees['学术生产力1'] - df_awardees['学术生产力0']
+        df_awardees['学术影响力变化'] = df_awardees['学术影响力1'] - df_awardees['学术影响力0']
+
+        # 提取变化值用于 t 检验
+        changes = {
+            '综合分数1-\r综合分数0': df_awardees['综合分数变化'],
+            '学术生产力1-\r学术生产力0': df_awardees['学术生产力变化'],
+            '学术影响力1-\r学术影响力0': df_awardees['学术影响力变化']
+        }
+        results = []
+        for label, change_data in changes.items():
+            n = len(change_data)
+            mean_diff = change_data.mean()
+            std_dev = change_data.std()
+            std_err = std_dev / np.sqrt(n)
+
+            # 95% 置信区间
+            ci = stats.t.interval(0.95, df=n - 1, loc=mean_diff, scale=std_err)
+            ci_lower, ci_upper = ci
+
+            # t 检验：H0: 均值变化 = 0
+            t_stat, p_value = stats.ttest_1samp(change_data, 0)
+
+            results.append({
+                '指标': label,
+                '均值差值': mean_diff,
+                '标准差': std_dev,
+                '均值的标准误差': std_err,
+                'CI下限': ci_lower,
+                'CI上限': ci_upper,
+                't': t_stat,
+                'df': n - 1,
+                'Sig.(双侧)': p_value
+            })
+        return results
 
     input_file = OUTPUT_DIR.joinpath("A3-差值分析数据集.xlsx")
-    _df = pd.read_excel(input_file)
-    _table = init_table()
-    fill_table(_table, _df)
-    return _table
+    df = pd.read_excel(input_file)
+    rows = calculate_stats(df)
+
+    # 创建表格
+    table = init_table()
+    for res in rows:
+        row = table.add_row().cells
+        row[0].text = res['指标']
+        row[1].text = f"{res['均值差值']:.2f}"
+        row[2].text = f"{res['标准差']:.2f}"
+        row[3].text = f"{res['均值的标准误差']:.2f}"
+
+        # CI 下限和上限填入第4、5列
+        row[4].text = f"{res['CI下限']:.2f}"
+        row[5].text = f"{res['CI上限']:.2f}"
+
+        row[6].text = f"{res['t']:.2f}"
+        row[7].text = str(res['df'])
+        row[8].text = f"{res['Sig.(双侧)']:.3f}"
+
+        row[0].width = Cm(5)
+
+    return table
 
 
 def add_all_appendix_tables():
     doc = Document()
 
-    # 附件
-    # set_heading_font_style(doc.add_paragraph('附件'))
-    # set_heading_font_style(doc.add_heading('附表1. 获奖人按研究类型归类'))
-    # appendix_1(doc)
-    # set_heading_font_style(doc.add_heading('附表2. 获奖人获奖前后5年论文专利指标数据'))
-    # appendix_2(doc)
-    # set_heading_font_style(doc.add_heading('附表3. 获奖人获奖前后5年学术能力指标与对照学者均值的差值'))
-    # appendix_3(doc)
+    # 附表
+    set_heading_font_style(doc.add_paragraph('附件'))
+    set_heading_font_style(doc.add_heading('附表1. 获奖人按研究类型归类'))
+    appendix_1(doc)
+    set_heading_font_style(doc.add_heading('附表2. 获奖人获奖前后5年论文专利指标数据'))
+    appendix_2(doc)
+    set_heading_font_style(doc.add_heading('附表3. 获奖人获奖前后5年学术能力指标与对照学者均值的差值'))
+    appendix_3(doc)
     set_heading_font_style(doc.add_heading('附表4. 获奖人获奖前后5年学术能力指标配对样本t检验结果'))
     appendix_4(doc)
 
