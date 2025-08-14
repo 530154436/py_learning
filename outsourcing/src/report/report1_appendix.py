@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
 from docx import Document
-from docx.shared import Pt, Inches
+from docx.shared import Pt, Inches, Cm
 
 from analysis import RESEARCH_TYPE_MAPPING
 from config import DATASET_DIR, OUTPUT_DIR
@@ -97,6 +97,87 @@ def appendix_1(doc: Document):
     return table
 
 
+def appendix_2(doc: Document):
+    """
+    附表2. 获奖人获奖前后5年论文专利指标数据
+    """
+    def calculate_stats(df, time_window):
+        """ 计算统计值
+        """
+        stats_df = df[df['时间窗口（0=获奖前5年，1=获奖后5年）'] == time_window]
+        stats = {
+            '发文量': ['总发文量'],
+            '通讯作者论文数(A1)': ['通讯作者论文数（A1）'],
+            '专利族数量(A2)': ['专利族数量（A2）'],
+            '第一发明人授权专利数量(A3)': ['第一发明人授权专利数量（A3）'],
+            '论文篇均被引频次(B1)': ['论文篇均被引频次（B1）'],
+            'Q1区通讯作者论文数量占比(B2)': ['前10%高影响力期刊或会议通讯作者论文数量占比（B3）'],
+            '单篇最高被引频次(B3)': ['单篇最高被引频次（B2）'],
+            '专利被引频次(B4)': ['专利被引频次（B4）']
+        }
+        result = {}
+        for key, cols in stats.items():
+            data = stats_df[cols].values.flatten()
+            result[key] = {
+                '最小值': data.min(),
+                '最大值': data.max(),
+                '平均值': data.mean(),
+                '标准差': data.std()
+            }
+        return result
+
+    def fill_table(table, stats, time_window_label):
+        """ 填充表格数据，并合并第一列的时间窗口单元格 """
+        start_row = len(table.rows)  # 当前最后一行索引（新行将从此开始）
+
+        # 先添加所有数据行
+        for key, values in stats.items():
+            row = table.add_row()
+            cells = row.cells
+            cells[1].text = key
+            cells[2].text = str(values['最小值'])
+            cells[3].text = str(values['最大值'])
+            cells[4].text = f"{values['平均值']:.2f}"
+            cells[5].text = f"{values['标准差']:.2f}"
+
+        # 计算结束行
+        end_row = len(table.rows) - 1  # 最后一行索引
+
+        # 合并第一列中从 start_row 到 end_row 的所有单元格
+        if start_row <= end_row:
+            cell_start = table.cell(start_row, 0)
+            cell_end = table.cell(end_row, 0)
+            merged_cell = cell_start.merge(cell_end)
+            merged_cell.text = time_window_label
+
+        for i, row in enumerate(table.rows):
+            row.cells[0].width = Cm(4)  # 设置第2列（指标列）的宽度为6厘米
+            row.cells[1].width = Cm(12)  # 设置第2列（指标列）的宽度为6厘米
+
+    input_file = OUTPUT_DIR.joinpath("A2-评价指标数据集.xlsx")
+    _df = pd.read_excel(input_file)
+    _df = _df[_df["学者类型（获奖人=1，0=对照学者）"] == 1]
+
+    stats_pre_award = calculate_stats(_df, 0)
+    stats_post_award = calculate_stats(_df, 1)
+
+    # 创建表格
+    _table = doc.add_table(rows=1, cols=6)
+    _table.style = 'Table Grid'  # 可选样式
+    hdr_cells = _table.rows[0].cells
+    hdr_cells[0].text = '时间窗口'
+    hdr_cells[1].text = '指标'
+    hdr_cells[2].text = '最小值'
+    hdr_cells[3].text = '最大值'
+    hdr_cells[4].text = '平均值'
+    hdr_cells[5].text = '标准差'
+
+    # 填充数据
+    fill_table(_table, stats_pre_award, "获奖前5年")
+    fill_table(_table, stats_post_award, "获奖后5年")
+    return _table
+
+
 def add_all_appendix_tables():
     doc = Document()
 
@@ -104,16 +185,17 @@ def add_all_appendix_tables():
     set_heading_font_style(doc.add_paragraph('附件'))
     set_heading_font_style(doc.add_heading('附表1. 获奖人按研究类型归类'))
     appendix_1(doc)
+    set_heading_font_style(doc.add_heading('附表2. 获奖人获奖前后5年论文专利指标数据'))
+    appendix_2(doc)
 
     # 获取表格并合并单元格
     for i, table in enumerate(doc.tables):
-        table = doc.tables[0]  # 假设要处理的是第一个表格
+        table = doc.tables[i]
         doc.tables[i] = merge_table_column(table, col_idx=0)  # 合并第 0 列（时间窗口列）
         set_table_column_font(table)
 
     doc.save('获奖人分类统计表.docx')
     print("Word表格已生成：获奖人分类统计表.docx")
-
 
 
 if __name__ == '__main__':

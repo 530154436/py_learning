@@ -12,5 +12,5 @@
 [Python 使用DocxTemplate模板实现将数据写入word中](https://blog.csdn.net/Hushi1706IT/article/details/129650996)<br>
 
 ```shell
-pip install openpyxl docxtpl pandas matplotlib pydantic
+pip install openpyxl docxtpl pandas matplotlib pydantic dataclasses_json
 ```
