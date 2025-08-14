@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
 from docx import Document
+from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT, WD_ALIGN_VERTICAL
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.shared import Pt, Inches, Cm
 
 from analysis import RESEARCH_TYPE_MAPPING
@@ -127,7 +129,8 @@ def appendix_2(doc: Document):
         return result
 
     def fill_table(table, stats, time_window_label):
-        """ 填充表格数据，并合并第一列的时间窗口单元格 """
+        """ 填充表格数据，并合并第一列的时间窗口单元格
+        """
         start_row = len(table.rows)  # 当前最后一行索引（新行将从此开始）
 
         # 先添加所有数据行
@@ -178,6 +181,102 @@ def appendix_2(doc: Document):
     return _table
 
 
+def appendix_3(doc: Document):
+    """
+    附表3. 获奖人获奖前后5年论文专利指标数据
+    """
+    def init_table():
+        """ 创建表格和表头
+        """
+        table = doc.add_table(rows=0, cols=10)  # 先不加行，手动控制
+        table.style = 'Table Grid'
+
+        # -----------------------------
+        # 第一层表头：时间窗口分组（仅合并“前5年”和“后5年”部分）
+        # -----------------------------
+        header_row1 = table.add_row().cells
+        header_row1[0].text = ""
+        header_row1[1].text = ""
+        header_row1[2].text = ""
+        # 第3-6列：获奖前5年差值 → 合并3列
+        cell_pre = header_row1[3]
+        cell_pre.merge(header_row1[4]).merge(header_row1[5])
+        cell_pre.text = "获奖前5年差值"
+        for paragraph in cell_pre.paragraphs:
+            paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+        # 第7-10列：获奖后5年差值 → 合并4列
+        cell_post = header_row1[6]
+        cell_post.merge(header_row1[7]).merge(header_row1[8])
+        cell_post.text = "获奖后5年差值"
+        for paragraph in cell_post.paragraphs:
+            paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+        header_row1[9].text = ""
+        # -----------------------------
+        # 第二层表头：具体指标名称
+        # -----------------------------
+        header_row2 = table.add_row().cells
+        header_row2[0].text = "序号"
+        header_row2[0].merge(header_row1[0])
+        header_row2[1].text = "获奖人姓名"
+        header_row2[1].merge(header_row1[1])
+        header_row2[2].text = "领域"
+        header_row2[2].merge(header_row1[2])
+        header_row2[3].text = "综合分数"
+        header_row2[4].text = "学术生产力"
+        header_row2[5].text = "学术影响力"
+        header_row2[6].text = "综合分数"
+        header_row2[7].text = "学术生产力"
+        header_row2[8].text = "学术影响力"
+        header_row2[9].text = "成长模式"
+        header_row2[9].merge(header_row1[9])
+        return table
+
+    def fill_table(table, df):
+        """ 填充表格数据
+        """
+        # 只保留获奖人（学者类型 = 1）
+        df_awardees = df[df['学者类型（获奖人=1，0=对照学者）'] == 1].reset_index(drop=True)
+        for idx, row in df_awardees.iterrows():
+            data_row = table.add_row().cells
+
+            data_row[0].text = str(idx + 1)  # 序号
+            data_row[1].text = row['姓名']  # 姓名
+            data_row[2].text = row['研究领域']  # 领域
+            # 获奖前5年差值（直接使用已有字段）
+            data_row[3].text = f"{row['差值-综合分数0']:.2f}"  # 综合分数
+            data_row[4].text = f"{row['差值-学术生产力0']:.2f}"  # 学术生产力
+            data_row[5].text = f"{row['差值-学术影响力0']:.2f}"  # 学术影响力
+            # 获奖后5年差值
+            data_row[6].text = f"{row['差值-综合分数1']:.2f}"
+            data_row[7].text = f"{row['差值-学术生产力1']:.2f}"
+            data_row[8].text = f"{row['差值-学术影响力1']:.2f}"
+            data_row[9].text = row['成长模式']
+
+        # 设置列宽（可选，提升可读性）
+        col_widths = [
+            None,  # 序号 → 稍宽一点
+            Cm(3.5),  # 姓名
+            Cm(4.5),  # 领域
+            None,  # 综合分数（前）
+            None,  # 学术生产力（前）
+            None,  # 学术影响力（前）
+            None,  # 综合分数（后）
+            None,  # 学术生产力（后）
+            None,  # 学术影响力（后）
+            Cm(4.5),  # 成长模式 → 更宽
+        ]
+        for i, width in enumerate(col_widths):
+            if not width:
+                continue
+            for row in table.rows:
+                row.cells[i].width = width
+
+    input_file = OUTPUT_DIR.joinpath("A3-差值分析数据集.xlsx")
+    _df = pd.read_excel(input_file)
+    _table = init_table()
+    fill_table(_table, _df)
+    return _table
+
 def add_all_appendix_tables():
     doc = Document()
 
@@ -187,6 +286,8 @@ def add_all_appendix_tables():
     appendix_1(doc)
     set_heading_font_style(doc.add_heading('附表2. 获奖人获奖前后5年论文专利指标数据'))
     appendix_2(doc)
+    set_heading_font_style(doc.add_heading('附表3. 获奖人获奖前后5年学术能力指标与对照学者均值的差值'))
+    appendix_3(doc)
 
     # 获取表格并合并单元格
     for i, table in enumerate(doc.tables):
@@ -194,8 +295,8 @@ def add_all_appendix_tables():
         doc.tables[i] = merge_table_column(table, col_idx=0)  # 合并第 0 列（时间窗口列）
         set_table_column_font(table)
 
-    doc.save('获奖人分类统计表.docx')
-    print("Word表格已生成：获奖人分类统计表.docx")
+    doc.save('1-附表.docx')
+    print("1-附表.docx")
 
 
 if __name__ == '__main__':

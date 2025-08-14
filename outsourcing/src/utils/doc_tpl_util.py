@@ -77,7 +77,7 @@ def set_table_column_font(table: Table,
         for cell in table.rows[i].cells:
             text = cell.text.strip()
             cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
-            cell.vertical_alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+            # cell.vertical_alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
             for paragraph in cell.paragraphs:
                 paragraph.vertical_alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
