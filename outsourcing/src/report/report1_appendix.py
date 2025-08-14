@@ -277,17 +277,81 @@ def appendix_3(doc: Document):
     fill_table(_table, _df)
     return _table
 
+
+def appendix_4(doc: Document):
+    """
+    附表3. 获奖人获奖前后5年论文专利指标数据
+    """
+    def init_table():
+        """ 创建表格和表头
+        """
+        table = doc.add_table(rows=0, cols=9)  # 先不加行，手动控制
+        table.style = 'Table Grid'
+
+        # -----------------------------
+        # 第一层表头：时间窗口分组（仅合并“前5年”和“后5年”部分）
+        # -----------------------------
+        header_row1 = table.add_row().cells
+        header_row1[0].text = ""
+        header_row1[1].text = ""
+        header_row1[2].text = ""
+        header_row1[3].text = ""
+        # 第3-6列：获奖前5年差值 → 合并3列
+        cell = header_row1[4]
+        cell.merge(header_row1[4]).merge(header_row1[5])
+        cell.text = "差分的95%\n置信区间"
+        for paragraph in cell.paragraphs:
+            paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+        header_row1[6].text = ""
+        header_row1[7].text = ""
+        header_row1[8].text = ""
+        # -----------------------------
+        # 第二层表头：具体指标名称
+        # -----------------------------
+        header_row2 = table.add_row().cells
+        header_row2[0].text = "配对样本：获奖后5年-获奖前5年"
+        header_row2[0].merge(header_row1[0])
+        header_row2[1].text = "均值差值"
+        header_row2[1].merge(header_row1[1])
+        header_row2[2].text = "标准差"
+        header_row2[2].merge(header_row1[2])
+        header_row2[3].text = "均值的标准误"
+        header_row2[3].merge(header_row1[3])
+        header_row2[4].text = "下限"
+        header_row2[5].text = "上限"
+        header_row2[6].text = "t"
+        header_row2[6].merge(header_row1[6])
+        header_row2[7].text = "df"
+        header_row2[7].merge(header_row1[7])
+        header_row2[8].text = "Sig.(双侧)"
+        header_row2[8].merge(header_row1[8])
+        return table
+
+    def fill_table(table, df):
+        """ 填充表格数据
+        """
+        pass
+
+    input_file = OUTPUT_DIR.joinpath("A3-差值分析数据集.xlsx")
+    _df = pd.read_excel(input_file)
+    _table = init_table()
+    fill_table(_table, _df)
+    return _table
+
+
 def add_all_appendix_tables():
     doc = Document()
 
     # 附件
-    set_heading_font_style(doc.add_paragraph('附件'))
-    set_heading_font_style(doc.add_heading('附表1. 获奖人按研究类型归类'))
-    appendix_1(doc)
-    set_heading_font_style(doc.add_heading('附表2. 获奖人获奖前后5年论文专利指标数据'))
-    appendix_2(doc)
-    set_heading_font_style(doc.add_heading('附表3. 获奖人获奖前后5年学术能力指标与对照学者均值的差值'))
-    appendix_3(doc)
+    # set_heading_font_style(doc.add_paragraph('附件'))
+    # set_heading_font_style(doc.add_heading('附表1. 获奖人按研究类型归类'))
+    # appendix_1(doc)
+    # set_heading_font_style(doc.add_heading('附表2. 获奖人获奖前后5年论文专利指标数据'))
+    # appendix_2(doc)
+    # set_heading_font_style(doc.add_heading('附表3. 获奖人获奖前后5年学术能力指标与对照学者均值的差值'))
+    # appendix_3(doc)
+    set_heading_font_style(doc.add_heading('附表4. 获奖人获奖前后5年学术能力指标配对样本t检验结果'))
+    appendix_4(doc)
 
     # 获取表格并合并单元格
     for i, table in enumerate(doc.tables):
