@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from typing import List
-
 import numpy as np
 import pandas as pd
 from docx import Document
@@ -320,33 +318,38 @@ def appendix_4(doc: Document):
         return table
 
     def calculate_stats(data: DataFrame):
-        """ 计算每位获奖人自身的“获奖前后变化” 置信区间和T检验
+        """ 计算：获奖人相对于对照组的“差距变化”是否显著
+            即：检验 (差值-综合分数1) vs (差值-综合分数0) 是否有显著变化
         """
         # 只保留获奖人（学者类型 = 1）
         df_awardees = data[data['学者类型（获奖人=1，0=对照学者）'] == 1].copy()
-        df_awardees['综合分数变化'] = df_awardees['综合分数1'] - df_awardees['综合分数0']
-        df_awardees['学术生产力变化'] = df_awardees['学术生产力1'] - df_awardees['学术生产力0']
-        df_awardees['学术影响力变化'] = df_awardees['学术影响力1'] - df_awardees['学术影响力0']
-
-        # 提取变化值用于 t 检验
+        # 定义要检验的指标
         changes = {
-            '综合分数1-\r综合分数0': df_awardees['综合分数变化'],
-            '学术生产力1-\r学术生产力0': df_awardees['学术生产力变化'],
-            '学术影响力1-\r学术影响力0': df_awardees['学术影响力变化']
+            '综合分数1-\r综合分数0': ('差值-综合分数0', '差值-综合分数1'),
+            '学术生产力1-\r学术生产力0': ('差值-学术生产力0', '差值-学术生产力1'),
+            '学术影响力1-\r学术影响力0': ('差值-学术影响力0', '差值-学术影响力1')
         }
+
         results = []
-        for label, change_data in changes.items():
-            n = len(change_data)
-            mean_diff = change_data.mean()
-            std_dev = change_data.std()
+        for label, (pre_diff_col, post_diff_col) in changes.items():
+            # 获取“获奖人 vs 对照组”的差值
+            pre_diff = df_awardees[pre_diff_col]  # 获奖前，获奖人比对照组高/低多少
+            post_diff = df_awardees[post_diff_col]  # 获奖后，获奖人比对照组高/低多少
+
+            # 计算“差距的变化”：post_diff - pre_diff
+            diff_change = post_diff - pre_diff
+
+            n = len(diff_change)
+            mean_diff = diff_change.mean()
+            std_dev = diff_change.std()
             std_err = std_dev / np.sqrt(n)
 
             # 95% 置信区间
             ci = stats.t.interval(0.95, df=n - 1, loc=mean_diff, scale=std_err)
             ci_lower, ci_upper = ci
 
-            # t 检验：H0: 均值变化 = 0
-            t_stat, p_value = stats.ttest_1samp(change_data, 0)
+            # 配对样本 t 检验：检验“差距变化”是否显著不为0
+            t_stat, p_value = stats.ttest_rel(post_diff, pre_diff)  # 等价于 ttest_1samp(diff_change, 0)
 
             results.append({
                 '指标': label,
@@ -407,8 +410,9 @@ def add_all_appendix_tables():
         doc.tables[i] = merge_table_column(table, col_idx=0)  # 合并第 0 列（时间窗口列）
         set_table_column_font(table)
 
-    doc.save('1-首届获奖人获奖前后学术能力量化评估综合报告-附表.docx')
-    print("1-首届获奖人获奖前后学术能力量化评估综合报告-附表.docx")
+    save_file = OUTPUT_DIR.joinpath('1-首届获奖人获奖前后学术能力量化评估综合报告-附表.docx')
+    doc.save(save_file)
+    print(save_file)
 
 
 if __name__ == '__main__':
