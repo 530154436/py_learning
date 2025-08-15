@@ -3,7 +3,7 @@ import pandas as pd
 from docx.shared import Mm
 from docxtpl import DocxTemplate, InlineImage
 from utils.doc_tpl_util import merge_table_column
-from utils.plot_util import dataframe_to_chart
+from utils.plot_util import plot_line_char_by_df
 
 
 def main():
@@ -29,7 +29,7 @@ def main():
     # 3.导入excel表格数据并绘制折线图嵌入到doc
     df = pd.read_excel("data/demo/data.xlsx")
     image_path = "../data/demo/image.png"
-    dataframe_to_chart(df, x_col="姓名", y_cols=["综合分数"], title="综合分数", image_path=image_path)
+    plot_line_char_by_df(df, x_col="姓名", y_cols=["综合分数"], title="综合分数", image_path=image_path)
     insert_image = InlineImage(doc, image_path, width=Mm(140))
     context["insert_image"] = insert_image
 

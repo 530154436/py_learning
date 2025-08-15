@@ -101,3 +101,13 @@ def set_heading_font_style(paragraph: Paragraph,
         run.font.color.rgb = RGBColor(0, 0, 0)
         run.element.rPr.rFonts.set(qn('w:eastAsia'), font_name_ch)  # 设置中文字体为黑体
         run.bold = False  # 可选：取消加粗（默认 heading 会加粗）
+
+
+def set_font_style(run, font_name: str = '仿宋_GB2312', size_pt = 14, bold=False):
+    """设置字体、字号、加粗"""
+    run.font.name = font_name
+    run._element.rPr.rFonts.set(qn('w:eastAsia'), font_name)
+    run.font.size = Pt(size_pt)
+    run.font.bold = bold
+    # 避免中文字体变英文的问题
+    run.font.color.rgb = RGBColor(0, 0, 0)  # 黑色
