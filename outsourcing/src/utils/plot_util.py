@@ -99,15 +99,16 @@ def plot_grouped_bar(
     title: Optional[str] = None,
     x_label: Optional[str] = None,
     y_label: Optional[str] = None,
-    output_path: str = "bar_chart.png",
     fig_size: tuple = (8, 6),
-    y_min: float = 0,
-    y_max: Optional[float] = None,
     bar_width_factor: float = 0.5,  # 控制条形总宽度占每组宽度的比例
-    group_padding: float = 0.16  # 组与组之间的间距比例
+    group_padding: float = 0.16,  # 组与组之间的间距比例
+    output_path: str = "bar_chart.png",
 ):
     """
     绘制分组条形图并保存为图片
+    :param x_data: X轴数据 [m,]
+    :param y_data: Y轴数据 [m, n]
+    :param labels: 图例(分组标签) [n,]
     """
     fig, ax = plt.subplots(figsize=fig_size)
 
@@ -147,9 +148,8 @@ def plot_grouped_bar(
 
     y_ticks = ax.get_yticks()
     y_step = y_ticks[1] - y_ticks[0] if len(y_ticks) > 1 else 1.0
-    if y_max is None:
-        y_max = max(max(data) for data in y_data) + y_step
-    ax.set_ylim(y_min, y_max)
+    y_max = max(max(data) for data in y_data) + y_step
+    ax.set_ylim(0, y_max)
 
     ax.legend(bbox_to_anchor=(0.5, -0.08), loc='upper center', ncol=len(labels))
     ax.grid(axis='y', linestyle='--', alpha=0.7, linewidth=0.5)
@@ -186,32 +186,16 @@ def plot_multiple_grouped_bars(
     bar_width = min(total_width / n_datasets, 0.2)
     indices = range(n_groups)
 
-    # 计算全局最大值，用于统一 Y 轴范围
+    # ✅ 计算全局最大值，用于统一 Y 轴范围
     all_data = y_data_before + y_data_after
     global_max = max(max(data) for data in all_data)
+    y_step = 5  # 可根据数据特点调整，比如 5, 10, 20...
+    y_max = ((global_max // y_step) + 2) * y_step  # 向上取整到最近的 y_step 的倍数，留点空隙
     y_min = 0
-    # 自动计算 y_step，目标约 8 个刻度
-    num_ticks = 8
-    y_max_approx = ((global_max // 10) + 2) * 10
-    y_step_approx = y_max_approx / (num_ticks - 1)
-
-    def nice_number(x):
-        if x <= 0:
-            return 1
-        exp = np.floor(np.log10(x))
-        b = x / (10**exp)
-        if b <= 1: return 1 * (10**exp)
-        elif b <= 2: return 2 * (10**exp)
-        elif b <= 5: return 5 * (10**exp)
-        else: return 10 * (10**exp)
-
-    y_step = nice_number(y_step_approx)
-    y_max = np.ceil(global_max / y_step) * y_step
-    y_max = max(y_max, y_step * num_ticks)
-    y_ticks = np.arange(0, y_max + y_step, y_step)
 
     # 存储第一个子图的条形，用于图例
     all_bars = []
+
     def plot_subplot(ax, y_data, subtitle):
         bars = []
         for i, (data, label) in enumerate(zip(y_data, labels)):
@@ -274,8 +258,9 @@ def plot_multiple_grouped_bars(
 if __name__ == '__main__':
     plot_grouped_bar(["A", "B", "C"],
                      [[10, 20, 30], [15, 25, 35]],
-                     labels=["Group 1", "Group 2"],
+                     labels=["获奖前5年", "获奖后5年"],
                      title="示例分组条形图")
+
     x_data = ["A1", "A2", "A3"]
     y_data_before = [[30, 5, 5], [30, 5, 5]]
     y_data_after = [[30, 5, 5], [30, 5, 5]]

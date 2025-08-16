@@ -97,7 +97,7 @@ class DomainReport:
                 labels=["获奖前5年", "获奖后5年"],
                 title=None,
                 x_label=None,
-                y_label=key,
+                y_label=None,
                 output_path=save_file
             )
             self.context.update({save_file.stem: InlineImage(self.doc, str(save_file), width=Mm(140))})
