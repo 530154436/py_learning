@@ -6,7 +6,7 @@ from docx.shared import Mm
 from docxtpl import DocxTemplate, InlineImage
 from config import DATASET_DIR, OUTPUT_DIR, CURRENT_YEAR
 from utils.doc_tpl_util import set_font_style
-from utils.plot_util import plot_group_bar_chart
+from utils.plot_util import plot_grouped_bar, plot_multiple_grouped_bars
 
 
 class DomainReport:
@@ -18,6 +18,9 @@ class DomainReport:
             "domain": self.domain,
             "CURRENT_YEAR": CURRENT_YEAR
         }
+        self.save_dir = OUTPUT_DIR.joinpath(self.domain)
+        if not self.save_dir.exists():
+            self.save_dir.mkdir(parents=True)
 
     def section1(self):
         input_file = DATASET_DIR.joinpath("S0.0-获奖人基础信息表.xlsx")
@@ -77,33 +80,50 @@ class DomainReport:
         df = pd.read_excel(input_file)
         # 筛选获奖人（学者类型 == 1）
         df = df[(df['学者类型（获奖人=1，0=对照学者）'] == 1)&(df['研究领域'] == self.domain)].copy()
-        # 提取获奖前（0）和获奖后（1）的数据
-        before = df[df["时间窗口（0=获奖前5年，1=获奖后5年）"] == 0].set_index("姓名")
-        after = df[df["时间窗口（0=获奖前5年，1=获奖后5年）"] == 1].set_index("姓名")
+        before = df[df["时间窗口（0=获奖前5年，1=获奖后5年）"] == 0].copy()
+        after = df[df["时间窗口（0=获奖前5年，1=获奖后5年）"] == 1].copy()
 
-        # 所有姓名保持一致顺序
+        # 一级指标绘图
+        y_data_before_1 = before.set_index("姓名")
+        y_data_after_1 = after.set_index("姓名")
         names = before.index.tolist()
-
-        # 绘制三个指标的条形图
-        metrics = [("学术生产力", f"{self.domain}/image_4_1"),
-                   ("学术影响力", f"{self.domain}/image_4_2"),
-                   ("综合分数", f"{self.domain}/image_4_4")]
+        metrics = [("学术生产力", self.save_dir.joinpath("image_4_1.png")),
+                   ("学术影响力", self.save_dir.joinpath("image_4_2.png")),
+                   ("综合分数", self.save_dir.joinpath("image_4_4.png"))]
         for key, save_file in metrics:
-            plot_group_bar_chart(
+            plot_grouped_bar(
                 x_data=names,
-                y_data=[before[key].values.tolist(), after[key].values.tolist()],
+                y_data=[y_data_before_1[key].values.tolist(), y_data_after_1[key].values.tolist()],
                 labels=["获奖前5年", "获奖后5年"],
                 title=None,
                 x_label=None,
                 y_label=key,
                 output_path=save_file
             )
-        self.context.update({
-            'image_4_1': InlineImage(self.doc, f"{self.domain}/image_4_1.png", width=Mm(140)),
-            'image_4_2': InlineImage(self.doc, f"{self.domain}/image_4_2.png", width=Mm(140)),
-            'image_4_4': InlineImage(self.doc, f"{self.domain}/image_4_4.png", width=Mm(140)),
-        })
+            self.context.update({save_file.stem: InlineImage(self.doc, str(save_file), width=Mm(140))})
 
+        # 二级指标绘图
+        # metrics = [([], self.save_dir.joinpath("image_4_3.png")),]
+        x_data = ["通讯作者论文数（A1）", "专利族数量（A2）", "第一发明人授权专利数量（A3）"]
+        y_data_before_2 = []
+        y_data_after_2 = []
+        labels = []
+        for name, chunk in before.groupby("姓名"):
+            y_data_before.append()
+
+        # for key, save_file in metrics:
+        plot_multiple_grouped_bars(
+            x_data=x_data,
+            y_data_before=y_data_before,
+            y_data_after=y_data_after,
+            labels=labels,
+            title=None,
+            y_label=None,
+            output_path="image_4_3.png",
+            y_step=10,
+        )
+        self.context.update({"image_4_3": InlineImage(self.doc, "image_4_3.png", width=Mm(140))})
+        # self.context.update({save_file.stem: InlineImage(self.doc, str(save_file), width=Mm(140))})
 
 
     def run(self):
@@ -111,7 +131,7 @@ class DomainReport:
         self.section4()
         self.doc.render(self.context)
         save_file = f'2-届KT获奖人获奖前后学术能力量化评估——{self.domain}领域.docx'
-        self.doc.save(save_file)
+        self.doc.save(self.save_dir.joinpath(save_file))
         print(save_file)
 
 
@@ -119,7 +139,7 @@ if __name__ == '__main__':
     _template_file = DATASET_DIR.joinpath("模板/2-届KT获奖人获奖前后学术能力量化评估——领域报告模板.docx")
     report = DomainReport('数学', template_file=str(_template_file))
     report.run()
-    report = DomainReport('化学新材料', template_file=str(_template_file))
-    report.run()
-    report = DomainReport('天文和地学', template_file=str(_template_file))
-    report.run()
+    # report = DomainReport('化学新材料', template_file=str(_template_file))
+    # report.run()
+    # report = DomainReport('天文和地学', template_file=str(_template_file))
+    # report.run()
