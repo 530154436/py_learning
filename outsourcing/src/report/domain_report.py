@@ -6,7 +6,7 @@ from docx.shared import Mm
 from docxtpl import DocxTemplate, InlineImage
 from config import DATASET_DIR, OUTPUT_DIR, CURRENT_YEAR
 from utils.doc_tpl_util import set_font_style
-from utils.plot_util import plot_grouped_bar, plot_multiple_grouped_bars
+from utils.plot_util import plot_grouped_bar
 
 
 class DomainReport:
@@ -92,10 +92,9 @@ class DomainReport:
                    ("综合分数", self.save_dir.joinpath("image_4_4.png"))]
         for key, save_file in metrics:
             plot_grouped_bar(
-                x_data=names,
-                y_data=[y_data_before_1[key].values.tolist(), y_data_after_1[key].values.tolist()],
+                names,
+                [y_data_before_1[key].values.tolist(), y_data_after_1[key].values.tolist()],
                 labels=["获奖前5年", "获奖后5年"],
-                title=None,
                 x_label=None,
                 y_label=None,
                 output_path=save_file
@@ -103,27 +102,33 @@ class DomainReport:
             self.context.update({save_file.stem: InlineImage(self.doc, str(save_file), width=Mm(140))})
 
         # 二级指标绘图
-        # metrics = [([], self.save_dir.joinpath("image_4_3.png")),]
+        metrics = [("图4-3. 获奖人获奖前后5年学术生产力二级指标比较", self.save_dir.joinpath("image_4_3.png"))]
         x_data = ["通讯作者论文数（A1）", "专利族数量（A2）", "第一发明人授权专利数量（A3）"]
-        y_data_before_2 = []
-        y_data_after_2 = []
-        labels = []
-        for name, chunk in before.groupby("姓名"):
-            y_data_before.append()
-
-        # for key, save_file in metrics:
-        plot_multiple_grouped_bars(
-            x_data=x_data,
-            y_data_before=y_data_before,
-            y_data_after=y_data_after,
-            labels=labels,
-            title=None,
-            y_label=None,
-            output_path="image_4_3.png",
-            y_step=10,
-        )
-        self.context.update({"image_4_3": InlineImage(self.doc, "image_4_3.png", width=Mm(140))})
-        # self.context.update({save_file.stem: InlineImage(self.doc, str(save_file), width=Mm(140))})
+        y_data_before_2, y_data_after_2, labels = [], [], []
+        # 按姓名分组，提取每位获奖人的数据
+        for name, group in before.groupby("姓名"):
+            row = group.iloc[0]
+            y_data_before_2.append([row["通讯作者论文数（A1）"],
+                                    row["专利族数量（A2）"],
+                                    row["第一发明人授权专利数量（A3）"]])
+            labels.append(name)
+        for name, group in after.groupby("姓名"):
+            row = group.iloc[0]
+            y_data_after_2.append([row["通讯作者论文数（A1）"],
+                                    row["专利族数量（A2）"],
+                                    row["第一发明人授权专利数量（A3）"]])
+        for key, save_file in metrics:
+            plot_grouped_bar(
+                x_data,
+                y_data_before_2, y_data_after_2,
+                labels=labels,
+                titles=["获奖前5年", "获奖后5年"],
+                x_label=None,
+                y_label=None,
+                fig_size=(12, 6),
+                output_path=save_file
+            )
+            self.context.update({save_file.stem: InlineImage(self.doc, str(save_file), width=Mm(140))})
 
 
     def run(self):
