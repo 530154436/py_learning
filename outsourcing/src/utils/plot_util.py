@@ -137,21 +137,27 @@ def  _plot_bar(
     group_gap = (1 - (bar_width * num_groups) - (bar_gap * (num_groups - 1))) / (num_items + 1)  # 计算组间空隙大小
 
     x_pos = np.arange(len(x_data), dtype=np.float64)
-    print(x_pos)
+    # print(x_pos)
 
     for i, (data, label) in enumerate(zip(y_data, labels)):
         pos = x_pos + (i * (bar_width + bar_gap))  # 根据组索引、组内间隔和组间间隔计算位置
-        print(i, label, pos)
+        # print(i, label, pos)
         # Create a set of bars for the current group
         bar = ax.bar(pos, data, width=bar_width, label=label)
         for rect in bar:
             height = rect.get_height()
+            if height >= 0:
+                va = 'bottom'
+                offset = 3
+            else:
+                va = 'top'
+                offset = -3
             ax.annotate(f'{height:.2f}',
                         xy=(rect.get_x() + rect.get_width() / 2, height),
-                        xytext=(0, 3),  # 3 points vertical offset
+                        xytext=(0, offset),  # 3 points vertical offset
                         textcoords="offset points",
-                        ha='center', va='bottom',
-                        fontsize=6)
+                        ha='center', va=va,
+                        fontsize=10)
     ax.set_xticks(x_pos + ((len(y_data) - 1) / 2) * bar_width)
     ax.set_xticklabels(x_data)
 
@@ -191,8 +197,8 @@ def plot_grouped_bar(
     all_data = list(reduce(lambda x, y: x + y, y_datas))
     y_max = max(max(data) for data in all_data)
     y_min = min(min(data) for data in all_data)
-    y_min = min(y_min, 0) if y_min > 0 else y_min - y_min * 0.1
-    y_max = y_max + y_max * 0.2
+    y_min = min(y_min, 0) if y_min > 0 else y_min + y_min * 0.4
+    y_max = max(y_max, 0) if y_max < 0 else y_max + y_max * 0.4
 
     # 多个子图
     for i, (axes, y_data) in enumerate(zip(axes_list, y_datas)):
