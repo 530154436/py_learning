@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
-import re
 import pandas as pd
-from docx import Document
 from docx.shared import Mm
 from docxtpl import DocxTemplate, InlineImage
-from config import DATASET_DIR, OUTPUT_DIR, CURRENT_YEAR, TIME_WINDOW_0_START, TIME_WINDOW_1_START, TIME_WINDOW_0_END, \
-    TIME_WINDOW_1_END
-from utils.doc_tpl_util import set_font_style
+from pypinyin import lazy_pinyin
+from config import DATASET_DIR, OUTPUT_DIR, CURRENT_YEAR, \
+    TIME_WINDOW_0_START, TIME_WINDOW_1_START, TIME_WINDOW_0_END, TIME_WINDOW_1_END
 from utils.plot_util import plot_grouped_bar
 
 
@@ -23,27 +21,8 @@ class DomainReport:
         if not self.save_dir.exists():
             self.save_dir.mkdir(parents=True)
 
-    @staticmethod
-    def extract_jq_year(funding_text):
-        """从资助文本中提取杰青/国家杰出青年的年份
-        """
-        if not isinstance(funding_text, str):
-            return "/"
-        # 匹配 2022年杰青、2018杰青、国家杰出青年基金（2014）等
-        patterns = [
-            r'(?:20|19)\d{2}[年\-]?\s*(?:获)?(?:杰青|国家杰出青年)',
-            r'(?:杰青|国家杰出青年).*?(?:20|19)\d{2}',
-        ]
-        for pattern in patterns:
-            match = re.search(pattern, funding_text)
-            if match:
-                year_match = re.search(r'(?:20|19)\d{2}', match.group())
-                if year_match:
-                    return year_match.group() + "年"
-        return "/"
-
     def section1(self):
-        input_file = DATASET_DIR.joinpath("S0.0-获奖人基础信息表.xlsx")
+        input_file = DATASET_DIR.joinpath("S2.1-学者基本信息.xlsx")
         df = pd.read_excel(input_file)
 
         # 筛选获奖人（学者类型 == 1）
@@ -52,10 +31,10 @@ class DomainReport:
         avg_age = int(round(winners[f'年龄（截至统计年份-{CURRENT_YEAR}年）'].mean()))
         youngest = winners.loc[winners[f'年龄（截至统计年份-{CURRENT_YEAR}年）'].idxmin()]
         oldest = winners.loc[winners[f'年龄（截至统计年份-{CURRENT_YEAR}年）'].idxmax()]
-        has_nscf = winners['学术奖励荣誉/资助'].str.contains('杰青|优青', case=False, na=False)
+        has_nscf = winners['是否获得杰青项目资助（1=是，0=否或者未查询到信息）'] == 1
         have_nscf_num = has_nscf.sum()
         description = (
-            f"{self.domain}领域***届获奖人一共有{num_winners}人。获奖人基本信息见表1-1。"
+            f"{self.domain}领域2020届获奖人一共有{num_winners}人。获奖人基本信息见表1-1。"
             f"{have_nscf_num}名获奖人均获得国家杰出青年基金项目资助。目前，获奖人的平均年龄约为{avg_age}岁，"
             f"年龄最小的是{youngest['姓名']}{youngest[f'年龄（截至统计年份-{CURRENT_YEAR}年）']}岁，"
             f"最大是{oldest['姓名']}{oldest[f'年龄（截至统计年份-{CURRENT_YEAR}年）']}岁。"
@@ -70,8 +49,10 @@ class DomainReport:
                 'c2': row['出生年'],
                 'c3': row['工作单位'],
                 'c4': row['主要研究方向'],
-                'c5': self.extract_jq_year(row['学术奖励荣誉/资助'])
+                'c5': row['学术奖励荣誉/资助'],
             })
+
+        table_data.sort(key=lambda x: lazy_pinyin(x['c1']))
         self.context.update({
             'section_1_description': description,
             'table_1_1': table_data
@@ -292,17 +273,17 @@ class DomainReport:
             else:
                 item["c11"] = "/"
             data.append(item)
+        data.sort(key=lambda x: x["c1"])
         self.context.update({'table_appendix_3': data})
-
 
     def run(self):
         self.section1()
-        self.section4_1_image_a2()
-        self.section4_1_image_a3()
-        self.section4_2_table_a3()
-        self.appendix_1()
-        self.appendix_2()
-        self.appendix_3()
+        # self.section4_1_image_a2()
+        # self.section4_1_image_a3()
+        # self.section4_2_table_a3()
+        # self.appendix_1()
+        # self.appendix_2()
+        # self.appendix_3()
         self.doc.render(self.context)
         save_file = f'2-届KT获奖人获奖前后学术能力量化评估——{self.domain}领域.docx'
         self.doc.save(self.save_dir.joinpath(save_file))
@@ -312,18 +293,18 @@ class DomainReport:
 if __name__ == '__main__':
     _template_file = DATASET_DIR.joinpath("模板/2-届KT获奖人获奖前后学术能力量化评估——领域报告模板.docx")
     _domains = [
-        "数学",
-        "物理学",
-        "化学新材料",
-        "天文和地学",
-        "生命科学",
-        "信息电子",
-        "能源环境",
-        "先进制造",
+        # "数学",
+        # "物理学",
+        # "化学新材料",
+        # "天文和地学",
+        # "生命科学",
+        # "信息电子",
+        # "能源环境",
+        # "先进制造",
         "交通建筑",
-        "前沿交叉"
+        # "前沿交叉"
     ]
-    for domain in _domains:
-        print(domain)
-        report = DomainReport(domain, template_file=str(_template_file))
+    for _domain in _domains:
+        print(_domain)
+        report = DomainReport(_domain, template_file=str(_template_file))
         report.run()

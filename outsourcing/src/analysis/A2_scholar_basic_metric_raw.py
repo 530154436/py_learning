@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import json
 import pandas as pd
 from dataclasses import field, dataclass
 from dataclasses_json import config
@@ -30,6 +31,7 @@ class ScholarBasicMetricRawEntity(ScholarIdGroupEntity):
     patent_first_inventor_patent_hum: int = field(metadata=config(field_name="第一发明人授权专利数量（A3）", metadata={"description": "学者在给定时间内作为第一发明人授权的发明专利数量"}))
     avg_citations_per_paper: float = field(metadata=config(field_name="论文篇均被引频次（B1）", metadata={"description": "通讯作者论文篇均被引频次"}))
     max_citations_single_paper: int = field(metadata=config(field_name="单篇最高被引频次（B2）", metadata={"description": "在给定时间窗口内累计总被引频次最高的通讯作者论文引用次数"}))
+    max_citations_single_paper_info: str = field(metadata=config(field_name="单篇最高被引频次的论文信息", metadata={"description": "B2对应的论文信息"}))
     top_10p_corr_paper_ratio: float = field(metadata=config(field_name="前10%高影响力期刊或会议通讯作者论文数量占比（B3）", metadata={"description": "各领域JCR前10%期刊或重要国际会议通讯作者论文数量占比"}))
     patent_citations: int = field(metadata=config(field_name="专利被引频次（B4）", metadata={"description": "指专利族截至数据采集时间的总被引用次数"}))
 
@@ -117,6 +119,9 @@ class ScholarBasicMetricRaw(AbstractBase):
         max_citations_single_paper = sum_citations_per_paper.max()
         print("单篇最高被引频次（B2）:", max_citations_single_paper)
 
+        max_citations_single_paper_info = self.get_max_citations_paper(df_sub, start_year=start_year, end_year=end_year)
+        print("单篇最高被引频次论文信息:", max_citations_single_paper_info)
+
         # 9、前10%高影响力期刊或会议通讯作者论文数量占比（B3）：各领域JCR前10%期刊或重要国际会议通讯作者论文数量占比
         # 根据is_corresponding_author(except for math)和is_top_journal_confer两个字段筛选出研究者作为通讯作者且发表在顶级期刊或会议上的论文。
         top_10p_corr_paper_ratio = 0
@@ -134,6 +139,7 @@ class ScholarBasicMetricRaw(AbstractBase):
             total_corresponding_author_papers_no_pp=total_corresponding_author_papers_no_pp,
             avg_citations_per_paper=avg_citations_per_paper,
             max_citations_single_paper=0 if pd.isnull(max_citations_single_paper) else int(max_citations_single_paper),
+            max_citations_single_paper_info=json.dumps(max_citations_single_paper_info, ensure_ascii=False),
             top_10p_corr_paper_ratio=top_10p_corr_paper_ratio,
         )
 

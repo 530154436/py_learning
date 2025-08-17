@@ -26,6 +26,29 @@ class AbstractBase(object):
         return sum_citations_per_paper
 
     @staticmethod
+    def get_max_citations_paper(df: pd.DataFrame, start_year: int, end_year: int) -> list:
+        """
+        从指定年份区间内，筛选出被引用次数最高的论文。
+        """
+        df_sub = df[(start_year <= df["Publication Year"]) & (df["Publication Year"] <= end_year)]
+        years = list(str(year) for year in range(start_year, end_year + 1))
+        df_sub["sum_citations_per_paper"] = df_sub[years].sum(axis=1)
+        result_cols = ["UT (Unique WOS ID)", "Publication Year", "Article Title", "Source Title", "sum_citations_per_paper"]
+        df_result = df_sub[result_cols].copy()
+        max_citation = df_result["sum_citations_per_paper"].max()
+        top_papers = df_result[df_result["sum_citations_per_paper"] == max_citation]
+        return [
+            {
+                "ut": row["UT (Unique WOS ID)"],
+                "publication_year": int(row["Publication Year"]),
+                "article_title": row["Article Title"],
+                "source_title": row["Source Title"],
+                "sum_citations_per_paper": int(row["sum_citations_per_paper"])
+            }
+            for _, row in top_papers.iterrows()
+        ]
+
+    @staticmethod
     def calc_h_index(citations: List[int]) -> int:
         """
         H-index是一个数字，由Jorge Hirsch于2005年开始使用，旨在描述科研人员的科学生产力和影响力。
