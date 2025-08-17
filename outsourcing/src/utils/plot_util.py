@@ -119,52 +119,53 @@ def  _plot_bar(
     y_label: Optional[str] = None,
     y_min: Optional[float] = 0,
     y_max: Optional[float] = None,
-    bar_width_factor: float = 0.5,  # 控制条形总宽度占每组宽度的比例
-    group_padding: float = 0.2,  # 组与组之间的间距比例
-) -> List[BarContainer]:
+):
     """
     绘制分组条形图并保存为图片
     :param ax: 坐标轴
     :param x_data: X轴数据 [m,]
     :param y_data: Y轴数据 [m, n]
-    :param labels: 图例标签 [n,]
+    :param labels: 分组标签（图例） [n,]
     """
-    n_groups = len(x_data)
-    n_datasets = len(y_data)
-    labels = [f"Dataset {i + 1}" for i in range(n_datasets)] if labels is None else labels
+    num_groups = len(y_data)
+    num_items = len(x_data)
+    labels = [f"Group {i + 1}" for i in range(len(y_data))] if labels is None else labels
 
-    # 计算条形宽度和组间间距
-    total_width = bar_width_factor - (n_datasets - 1) * group_padding / n_datasets
-    bar_width = min(total_width / n_datasets, 0.2)
-    indices = range(n_groups)
+    # 动态计算 bar_width, group_gap, 和 bar_gap
+    bar_width = min(0.8 / num_groups, 0.2)  # 最大宽度为0.2，以避免单个分组时条形过宽
+    bar_gap = bar_width * 0.2  # 单位间隔，可以根据需求调整
+    group_gap = (1 - (bar_width * num_groups) - (bar_gap * (num_groups - 1))) / (num_items + 1)  # 计算组间空隙大小
 
-    bars = []
+    x_pos = np.arange(len(x_data), dtype=np.float64)
+    print(x_pos)
+
     for i, (data, label) in enumerate(zip(y_data, labels)):
-        offset = i * (bar_width + group_padding / n_datasets) - (total_width / 2)
-        bar = ax.bar([0.055 + x + offset for x in indices], data, width=bar_width, label=label)
-        bars.append(bar)
+        pos = x_pos + (i * (bar_width + bar_gap))  # 根据组索引、组内间隔和组间间隔计算位置
+        print(i, label, pos)
+        # Create a set of bars for the current group
+        bar = ax.bar(pos, data, width=bar_width, label=label)
         for rect in bar:
             height = rect.get_height()
             ax.annotate(f'{height:.2f}',
                         xy=(rect.get_x() + rect.get_width() / 2, height),
                         xytext=(0, 3),  # 3 points vertical offset
                         textcoords="offset points",
-                        ha='center', va='bottom')
+                        ha='center', va='bottom',
+                        fontsize=6)
+    ax.set_xticks(x_pos + ((len(y_data) - 1) / 2) * bar_width)
+    ax.set_xticklabels(x_data)
+
     if title:
         ax.set_title(title, fontsize=14)
     if y_label:
         ax.set_ylabel(y_label)
     if x_label:
         ax.set_xlabel(x_label)
-    ax.set_xticks(indices)
-    ax.set_xticklabels(x_data)
-    if y_max:
+    if y_min or y_max:
         ax.set_ylim(y_min, y_max)
         # ax.set_yticks(np.arange(0, y_max + 1, y_step))
-
     # ax.legend(bbox_to_anchor=(0.5, -0.08), loc='upper center', ncol=len(labels))
     ax.grid(axis='y', linestyle='--', alpha=0.7, linewidth=0.5)
-    return bars
 
 def plot_grouped_bar(
     x_data: List[str],
@@ -186,19 +187,19 @@ def plot_grouped_bar(
     if not isinstance(axes_list, Iterable):
         axes_list = [axes_list]
 
-    # 计算全局最大值，用于统一Y轴范围
+    # 计算全局最大值，用于统一X轴、Y轴范围
     all_data = list(reduce(lambda x, y: x + y, y_datas))
     y_max = max(max(data) for data in all_data)
-    y_step = y_max * 0.2
+    y_min = min(min(data) for data in all_data)
+    y_min = min(y_min, 0) if y_min > 0 else y_min - y_min * 0.1
+    y_max = y_max + y_max * 0.2
 
     # 多个子图
-    all_bars = []
     for i, (axes, y_data) in enumerate(zip(axes_list, y_datas)):
         title = titles[i] if titles else None
-        bars = _plot_bar(axes, x_data, y_data=y_data, title=title,
-                         labels=labels, x_label=x_label, y_label=y_label,
-                         y_min=0, y_max=y_max + y_step)
-        all_bars.extend(bars)
+        _plot_bar(axes, x_data, y_data=y_data, title=title,
+                  labels=labels, x_label=x_label, y_label=y_label,
+                  y_min=y_min, y_max=y_max)
 
     # 共享图例，放在最下方
     fig.legend(labels=labels, loc='lower center', ncol=len(labels), bbox_to_anchor=(0.5, 0.03))
@@ -212,15 +213,21 @@ def plot_grouped_bar(
 
 if __name__ == '__main__':
     plot_grouped_bar(["A", "B", "C"],
+                     [[10, 20, 30]],
+                     labels=["获奖前5年"],
+                     titles=["示例分组条形图"],
+                     output_path="bar_1.png")
+    plot_grouped_bar(["A", "B", "C"],
                      [[10, 20, 30], [15, 25, 35]],
                      labels=["获奖前5年", "获奖后5年"],
-                     titles=["示例分组条形图"])
+                     titles=["示例分组条形图"],
+                     output_path="bar_2.png")
     plot_grouped_bar(
         ["A1", "A2", "A3"],
         [[30, 5, 5], [30, 5, 5]],
         [[10, 5, 5], [30, 5, 5]],
         labels=["何旭华", "刘钢"],
         titles=["获奖前5年", "获奖后5年"],
-        fig_size=(10, 6),
-        output_path="shared_y_legend_bottom.png"
+        fig_size=(12, 6),
+        output_path="bar_3.png"
     )
