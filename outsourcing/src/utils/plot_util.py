@@ -119,6 +119,7 @@ def  _plot_bar(
     y_label: Optional[str] = None,
     y_min: Optional[float] = 0,
     y_max: Optional[float] = None,
+    fontsize: int = 14,
 ):
     """
     绘制分组条形图并保存为图片
@@ -133,7 +134,7 @@ def  _plot_bar(
 
     # 动态计算 bar_width, group_gap, 和 bar_gap
     bar_width = min(0.8 / num_groups, 0.2)  # 最大宽度为0.2，以避免单个分组时条形过宽
-    bar_gap = bar_width * 0.2  # 单位间隔，可以根据需求调整
+    bar_gap = bar_width * 0.3  # 单位间隔，可以根据需求调整
     group_gap = (1 - (bar_width * num_groups) - (bar_gap * (num_groups - 1))) / (num_items + 1)  # 计算组间空隙大小
 
     x_pos = np.arange(len(x_data), dtype=np.float64)
@@ -152,24 +153,26 @@ def  _plot_bar(
             else:
                 va = 'top'
                 offset = -3
-            ax.annotate(f'{height:.2f}',
+            ax.annotate(f'{height:.2f}' if isinstance(height, float) else f'{height}',
                         xy=(rect.get_x() + rect.get_width() / 2, height),
                         xytext=(0, offset),  # 3 points vertical offset
                         textcoords="offset points",
                         ha='center', va=va,
-                        fontsize=10)
+                        fontsize=12)
     ax.set_xticks(x_pos + ((len(y_data) - 1) / 2) * bar_width)
-    ax.set_xticklabels(x_data)
+    ax.set_xticklabels(x_data, fontsize=12)
 
     if title:
-        ax.set_title(title, fontsize=14)
+        ax.set_title(title, fontsize=fontsize)
     if y_label:
-        ax.set_ylabel(y_label)
+        ax.set_ylabel(y_label, fontsize=fontsize)
     if x_label:
-        ax.set_xlabel(x_label)
+        ax.set_xlabel(x_label, fontsize=fontsize)
     if y_min or y_max:
         ax.set_ylim(y_min, y_max)
         # ax.set_yticks(np.arange(0, y_max + 1, y_step))
+    ax.tick_params(axis='y', labelsize=fontsize)
+
     # ax.legend(bbox_to_anchor=(0.5, -0.08), loc='upper center', ncol=len(labels))
     ax.grid(axis='y', linestyle='--', alpha=0.7, linewidth=0.5)
 
@@ -208,7 +211,7 @@ def plot_grouped_bar(
                   y_min=y_min, y_max=y_max)
 
     # 共享图例，放在最下方
-    fig.legend(labels=labels, loc='lower center', ncol=len(labels), bbox_to_anchor=(0.5, 0.03))
+    fig.legend(labels=labels, loc='lower center', ncol=len(labels), bbox_to_anchor=(0.5, 0.03), fontsize=14)
 
     # 调整布局，为底部图例留出空间
     plt.tight_layout(rect=(0.0, 0.1, 1.0, 0.95))  # [left, bottom, right, top]

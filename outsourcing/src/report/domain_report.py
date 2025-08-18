@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import json
+
 import pandas as pd
 from docx.shared import Mm
 from docxtpl import DocxTemplate, InlineImage
@@ -27,6 +29,11 @@ class DomainReport:
 
         # 筛选获奖人（学者类型 == 1）
         winners = df[(df['学者类型（获奖人=1，0=对照学者）'] == 1)&(df['研究领域'] == self.domain)].copy()
+
+        # 按姓名拼音排序
+        winners["pinyin"] = winners["姓名"].apply(lazy_pinyin)
+        winners = winners.sort_values("pinyin", ascending=True)
+
         num_winners = len(winners)
         avg_age = int(round(winners[f'年龄（截至统计年份-{CURRENT_YEAR}年）'].mean()))
         youngest = winners.loc[winners[f'年龄（截至统计年份-{CURRENT_YEAR}年）'].idxmin()]
@@ -51,10 +58,9 @@ class DomainReport:
                 'c4': row['主要研究方向'],
                 'c5': row['学术奖励荣誉/资助'],
             })
-
-        table_data.sort(key=lambda x: lazy_pinyin(x['c1']))
         self.context.update({
             'section_1_description': description,
+            'num_winners': num_winners,
             'table_1_1': table_data
         })
 
@@ -63,23 +69,30 @@ class DomainReport:
         df = pd.read_excel(input_file)
         # 筛选获奖人（学者类型 == 1）
         df = df[(df['学者类型（获奖人=1，0=对照学者）'] == 1)&(df['研究领域'] == self.domain)].copy()
+        # 按姓名拼音排序
+        df["pinyin"] = df["姓名"].apply(lazy_pinyin)
+        df = df.sort_values("pinyin", ascending=True)
+        df["通讯作者论文数（A1）"] = df["通讯作者论文数（A1）"].astype(int)
+        df["专利族数量（A2）"] = df["专利族数量（A2）"].astype(int)
+        df["第一发明人授权专利数量（A3）"] = df["第一发明人授权专利数量（A3）"].astype(int)
+
         before = df[df["时间窗口（0=获奖前5年，1=获奖后5年）"] == 0].copy()
         after = df[df["时间窗口（0=获奖前5年，1=获奖后5年）"] == 1].copy()
 
         # 一级指标绘图
-        y_data_before_1 = before.set_index("姓名")
-        y_data_after_1 = after.set_index("姓名")
-        names = y_data_before_1.index.tolist()
+        names = before["姓名"].values.tolist()
         metrics = [
-            ("学术生产力", self.save_dir.joinpath("image_4_1.png")),
-            ("学术影响力", self.save_dir.joinpath("image_4_2.png")),
+            # 图4-1. 获奖人获奖前后5年学术能力综合得分
+            ("综合分数", self.save_dir.joinpath("image_4_1.png")),
+            # 图4-2. 获奖人获奖前后5年学术生产力比较
+            ("学术生产力", self.save_dir.joinpath("image_4_2.png")),
             # 图4-4. 获奖人获奖前后5年学术影响力比较
-            ("综合分数", self.save_dir.joinpath("image_4_4.png"))
+            ("学术影响力", self.save_dir.joinpath("image_4_4.png")),
         ]
         for key, save_file in metrics:
             plot_grouped_bar(
                 names,
-                [y_data_before_1[key].values.tolist(), y_data_after_1[key].values.tolist()],
+                [before[key].values.tolist(), after[key].values.tolist()],
                 labels=["获奖前5年", "获奖后5年"],
                 x_label=None,
                 y_label=None,
@@ -97,21 +110,19 @@ class DomainReport:
             (["单篇最高被引频次（B2）"], self.save_dir.joinpath("image_4_6.png")),
         ]
         for x_data, save_file in metrics:
-            y_data_before_list, y_data_after_list, labels = [], [], []
-            # 按姓名分组，提取每位获奖人的数据
-            for name, group in before.groupby("姓名"):
-                row = group.iloc[0]
+            y_data_before_list, y_data_after_list = [], []
+            for name in names:
+                row = before[before["姓名"] == name].iloc[0]
                 y_data = [row[key] for key in x_data]
                 y_data_before_list.append(y_data)
-                labels.append(name)
-            for name, group in after.groupby("姓名"):
-                row = group.iloc[0]
+            for name in names:
+                row = after[after["姓名"] == name].iloc[0]
                 y_data = [row[key] for key in x_data]
                 y_data_after_list.append(y_data)
             plot_grouped_bar(
                 x_data,
                 y_data_before_list, y_data_after_list,
-                labels=labels,
+                labels=names,
                 titles=["获奖前5年", "获奖后5年"],
                 x_label=None,
                 y_label=None,
@@ -120,11 +131,54 @@ class DomainReport:
             )
             self.context.update({save_file.stem: InlineImage(self.doc, str(save_file), width=Mm(140))})
 
+    def section4_1_table_a2(self):
+        input_file = OUTPUT_DIR.joinpath("A2-评价指标数据集.xlsx")
+        df = pd.read_excel(input_file)
+        # 筛选获奖人（学者类型 == 1）
+        df = df[(df['学者类型（获奖人=1，0=对照学者）'] == 1) & (df['研究领域'] == self.domain)].copy()
+        # 按姓名拼音排序
+        df["pinyin"] = df["姓名"].apply(lazy_pinyin)
+        df = df.sort_values("pinyin", ascending=True)
+
+        before = df[df["时间窗口（0=获奖前5年，1=获奖后5年）"] == 0].copy()
+        after = df[df["时间窗口（0=获奖前5年，1=获奖后5年）"] == 1].copy()
+        names = before["姓名"].values.tolist()
+
+        # 表4-1. 获奖人获奖前后5年以通讯作者身份发表的单篇最高被引论文
+        table_4_1_data = []
+        for name in names:
+            row1 = before[before["姓名"] == name].iloc[0]
+            paper_info1 = json.loads(row1["单篇最高被引频次的论文信息"])[0]
+            record = {
+                "a": name,
+                "b1": paper_info1.get("article_title", "/"),
+                "b2": paper_info1.get("source_title", "/"),
+                "b3": paper_info1.get("publication_year", "/"),
+                "b4": paper_info1.get("sum_citations_per_paper", "/"),
+                "b5": "/",
+            }
+            row2 = after[after["姓名"] == name].iloc[0]
+            paper_info2 = json.loads(row2["单篇最高被引频次的论文信息"])[0]
+            record.update({
+                "c1": paper_info2.get("article_title", "/"),
+                "c2": paper_info2.get("source_title", "/"),
+                "c3": paper_info2.get("publication_year", "/"),
+                "c4": "/",
+                "c5": paper_info2.get("sum_citations_per_paper", "/"),
+            })
+            table_4_1_data.append(record)
+        self.context.update({
+            'table_4_1': table_4_1_data
+        })
+
     def section4_1_image_a3(self):
         input_file = OUTPUT_DIR.joinpath("A3-差值分析数据集.xlsx")
         df = pd.read_excel(input_file)
         # 筛选获奖人（学者类型 == 1）
         df = df[(df['学者类型（获奖人=1，0=对照学者）'] == 1)&(df['研究领域'] == self.domain)].copy()
+        # 按姓名拼音排序
+        df["pinyin"] = df["姓名"].apply(lazy_pinyin)
+        df = df.sort_values("pinyin", ascending=True)
 
         # 图4-13. 获奖人与对照学者获奖前后5年学术影响力差值比较
         metrics = [
@@ -278,8 +332,9 @@ class DomainReport:
 
     def run(self):
         self.section1()
-        # self.section4_1_image_a2()
-        # self.section4_1_image_a3()
+        self.section4_1_image_a2()
+        self.section4_1_table_a2()
+        self.section4_1_image_a3()
         # self.section4_2_table_a3()
         # self.appendix_1()
         # self.appendix_2()
