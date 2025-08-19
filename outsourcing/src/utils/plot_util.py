@@ -135,15 +135,20 @@ def  _plot_bar(
     # 动态计算 bar_width, group_gap, 和 bar_gap
     bar_width = min(0.8 / num_groups, 0.2)  # 最大宽度为0.2，以避免单个分组时条形过宽
     bar_gap = bar_width * 0.3  # 单位间隔，可以根据需求调整
-    group_gap = (1 - (bar_width * num_groups) - (bar_gap * (num_groups - 1))) / (num_items + 1)  # 计算组间空隙大小
+    group_gap = 0.3  # 计算组间空隙大小
 
-    x_pos = np.arange(len(x_data), dtype=np.float64)
+    # 初始化每一组 x 的起始位置
+    x_pos = list(map(float, range(len(x_data))))
+    for i, x in enumerate(x_pos):
+        if i > 0:
+            x = max(x, x_pos[i-1] + num_groups * (bar_width + bar_gap) + group_gap)
+        x_pos[i] = x
+    x_pos = np.array(x_pos)
     # print(x_pos)
 
     for i, (data, label) in enumerate(zip(y_data, labels)):
         pos = x_pos + (i * (bar_width + bar_gap))  # 根据组索引、组内间隔和组间间隔计算位置
         # print(i, label, pos)
-        # Create a set of bars for the current group
         bar = ax.bar(pos, data, width=bar_width, label=label)
         for rect in bar:
             height = rect.get_height()
