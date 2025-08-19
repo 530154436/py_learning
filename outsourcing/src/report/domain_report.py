@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import json
-
 import pandas as pd
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from docx.shared import Mm
+from docx.table import Table
 from docxtpl import DocxTemplate, InlineImage
 from pypinyin import lazy_pinyin
 from config import DATASET_DIR, OUTPUT_DIR, CURRENT_YEAR, \
@@ -43,7 +45,7 @@ class DomainReport:
         winners["pinyin"] = winners["姓名"].apply(lazy_pinyin)
         winners = winners.sort_values("pinyin", ascending=True)
 
-        self.winers = winners.values.tolist()
+        self.winers = winners["姓名"].tolist()
         num_winners = len(winners)
         avg_age = int(round(winners[f'年龄（截至统计年份-{CURRENT_YEAR}年）'].mean()))
         youngest = winners.loc[winners[f'年龄（截至统计年份-{CURRENT_YEAR}年）'].idxmin()]
@@ -345,6 +347,31 @@ class DomainReport:
         data.sort(key=lambda x: x["c1"])
         self.context.update({'table_appendix_3': data})
 
+    def highlights_row_in_table(self, table: Table):
+        """ 设置表格行的背景色（获奖人行标黄） """
+        def set_row_background(row, color):
+            for cell in row.cells:
+                # 获取单元格的属性元素
+                tcPr = cell._tc.get_or_add_tcPr()
+                # 创建 shd 元素
+                shd = OxmlElement('w:shd')
+                shd.set(qn('w:fill'), color)        # 背景色
+                shd.set(qn('w:color'), 'auto')      # 字体颜色不影响
+                shd.set(qn('w:val'), 'clear')       # 值类型为“清晰”表示填充
+                tcPr.append(shd)
+
+        # 遍历表格行（跳过表头）
+        print("获奖人：", self.winers)
+        for i, row in enumerate(table.rows):
+            if i == 0:  # 假设第一行为表头
+                print("表头：", [cell.text for cell in row.cells])
+                continue
+            for j in range(len(row.cells)):
+                name = row.cells[j].text.strip()
+                if name in self.winers:
+                    set_row_background(row, "FFFF00")  # 黄色背景
+                    break  # 找到就退出列循环
+
     def run(self):
         self.section1()
         self.section4_1_image()
@@ -355,6 +382,11 @@ class DomainReport:
         self.appendix_2()
         self.appendix_3()
         self.doc.render(self.context)
+
+        # 附表获奖人高亮（附表2、附表3）
+        self.highlights_row_in_table(self.doc.tables[-2])
+        self.highlights_row_in_table(self.doc.tables[-1])
+
         save_file = f'2-届KT获奖人获奖前后学术能力量化评估——{self.domain}领域.docx'
         self.doc.save(self.save_dir.joinpath(save_file))
         print(save_file)
