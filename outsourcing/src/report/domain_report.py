@@ -15,11 +15,20 @@ class DomainReport:
     def __init__(self, domain: str, template_file: str):
         self.domain = domain
         self.doc: DocxTemplate = DocxTemplate(template_file)
+        self.context = dict()
+        self.save_dir = OUTPUT_DIR.joinpath(self.domain)
+        self.winers = []
+        self.init()
+
+    def init(self):
         self.context = {
             "domain": self.domain,
-            "CURRENT_YEAR": CURRENT_YEAR
+            "CURRENT_YEAR": CURRENT_YEAR,
+            'TIME_WINDOW_0_START': TIME_WINDOW_0_START,
+            'TIME_WINDOW_0_END': TIME_WINDOW_0_END,
+            'TIME_WINDOW_1_START': TIME_WINDOW_1_START,
+            'TIME_WINDOW_1_END': TIME_WINDOW_1_END,
         }
-        self.save_dir = OUTPUT_DIR.joinpath(self.domain)
         if not self.save_dir.exists():
             self.save_dir.mkdir(parents=True)
 
@@ -34,6 +43,7 @@ class DomainReport:
         winners["pinyin"] = winners["姓名"].apply(lazy_pinyin)
         winners = winners.sort_values("pinyin", ascending=True)
 
+        self.winers = winners.values.tolist()
         num_winners = len(winners)
         avg_age = int(round(winners[f'年龄（截至统计年份-{CURRENT_YEAR}年）'].mean()))
         youngest = winners.loc[winners[f'年龄（截至统计年份-{CURRENT_YEAR}年）'].idxmin()]
@@ -64,7 +74,7 @@ class DomainReport:
             'table_1_1': table_data
         })
 
-    def section4_1_image_a2(self):
+    def section4_1_image(self):
         input_file = OUTPUT_DIR.joinpath("A2-评价指标数据集.xlsx")
         df = pd.read_excel(input_file)
         # 筛选获奖人（学者类型 == 1）
@@ -131,7 +141,7 @@ class DomainReport:
             )
             self.context.update({save_file.stem: InlineImage(self.doc, str(save_file), width=Mm(140))})
 
-    def section4_1_table_a2(self):
+    def section4_1_table(self):
         input_file = OUTPUT_DIR.joinpath("A2-评价指标数据集.xlsx")
         df = pd.read_excel(input_file)
         # 筛选获奖人（学者类型 == 1）
@@ -148,7 +158,8 @@ class DomainReport:
         table_4_1_data = []
         for name in names:
             row1 = before[before["姓名"] == name].iloc[0]
-            paper_info1 = json.loads(row1["单篇最高被引频次的论文信息"])[0]
+            papers1 = json.loads(row1["单篇最高被引频次的论文信息"])
+            paper_info1 = papers1[0] if papers1 else dict()
             record = {
                 "a": name,
                 "b1": paper_info1.get("article_title", "/"),
@@ -158,7 +169,8 @@ class DomainReport:
                 "b5": "/",
             }
             row2 = after[after["姓名"] == name].iloc[0]
-            paper_info2 = json.loads(row2["单篇最高被引频次的论文信息"])[0]
+            papers2 = json.loads(row2["单篇最高被引频次的论文信息"])
+            paper_info2 = papers2[0] if papers2 else dict()
             record.update({
                 "c1": paper_info2.get("article_title", "/"),
                 "c2": paper_info2.get("source_title", "/"),
@@ -171,7 +183,7 @@ class DomainReport:
             'table_4_1': table_4_1_data
         })
 
-    def section4_1_image_a3(self):
+    def section4_2_image(self):
         input_file = OUTPUT_DIR.joinpath("A3-差值分析数据集.xlsx")
         df = pd.read_excel(input_file)
         # 筛选获奖人（学者类型 == 1）
@@ -205,7 +217,7 @@ class DomainReport:
             )
             self.context.update({save_file.stem: InlineImage(self.doc, str(save_file), width=Mm(140))})
 
-    def section4_2_table_a3(self):
+    def section4_2_table(self):
         input_file = OUTPUT_DIR.joinpath("A3-差值分析数据集.xlsx")
         df = pd.read_excel(input_file)
         # 筛选获奖人（学者类型 == 1）
@@ -258,12 +270,12 @@ class DomainReport:
         df = df[["姓名", "工作单位", "出生年", "主要研究方向", "学术奖励荣誉/资助"]].drop_duplicates(subset=['姓名'])
         for _, row in df.iterrows():
             data.append({
-                'c1': row['姓名'],
-                'c2': row['工作单位'],
-                'c3': mapping_series.get(row['姓名'], "/"),
+                'c1': mapping_series.get(row['姓名'], "/"),
+                'c2': row['姓名'],
+                'c3': row['工作单位'],
                 'c4': row['出生年'],
                 'c5': row['主要研究方向'],
-                'c6': self.extract_jq_year(row['学术奖励荣誉/资助'])
+                'c6': row['学术奖励荣誉/资助']
             })
         self.context.update({'table_appendix_1': data})
 
@@ -274,8 +286,8 @@ class DomainReport:
 
         data = []
         keys = [
-            "SCI论文数", "通讯作者论文数（A1）", "专利族数量（A2）", "第一发明人授权专利数量（A3）",
-            "论文篇均被引频次（B1）", "前10%高影响力期刊或会议通讯作者论文数量占比（B3）", "单篇最高被引频次（B2）",
+            "总发文量", "通讯作者论文数（A1）", "专利族数量（A2）", "第一发明人授权专利数量（A3）",
+            "论文篇均被引频次（B1）", "单篇最高被引频次（B2）", "前10%高影响力期刊或会议通讯作者论文数量占比（B3）",
             "专利被引频次（B4）"
         ]
         for _, chunk in df.groupby(by=['姓名']):
@@ -291,10 +303,6 @@ class DomainReport:
                 i += 1
             data.append(item)
         self.context.update({
-            'TIME_WINDOW_0_START': TIME_WINDOW_0_START,
-            'TIME_WINDOW_0_END': TIME_WINDOW_0_END,
-            'TIME_WINDOW_1_START': TIME_WINDOW_1_START,
-            'TIME_WINDOW_1_END': TIME_WINDOW_1_END,
             'table_appendix_2': data
         })
 
@@ -306,10 +314,11 @@ class DomainReport:
         input_file = OUTPUT_DIR.joinpath("A2-评价指标数据集.xlsx")
         df = pd.read_excel(input_file)
         df = df[df['研究领域'] == self.domain].copy()
+        names = df[df["时间窗口（0=获奖前5年，1=获奖后5年）"] == 0]["姓名"].values.tolist()
         data = []
         keys = ["综合分数", "学术生产力", "学术影响力"]
-        for _, chunk in df.groupby(by=['姓名']):
-            chunk_0 = chunk[chunk['时间窗口（0=获奖前5年，1=获奖后5年）'] == 0].iloc[0]
+        for name in names:
+            chunk_0 = df[(df['时间窗口（0=获奖前5年，1=获奖后5年）'] == 0) & (df['姓名'] == name)].iloc[0]
             item = {
                 "c1": chunk_0['分组ID'],
                 "c2": chunk_0['姓名'],
@@ -318,7 +327,7 @@ class DomainReport:
             }
             for i, key in zip([5, 6, 7], keys):
                 item[f"c{i}"] = round(chunk_0[key], ndigits=2)
-            chunk_1 = chunk[chunk['时间窗口（0=获奖前5年，1=获奖后5年）'] == 1].iloc[0]
+            chunk_1 = df[(df['时间窗口（0=获奖前5年，1=获奖后5年）'] == 1) & (df['姓名'] == name)].iloc[0]
             for i, key in zip([8, 9, 10], keys):
                 item[f"c{i}"] = round(chunk_1[key], ndigits=2)
             # 袁祥岩
@@ -332,13 +341,13 @@ class DomainReport:
 
     def run(self):
         self.section1()
-        self.section4_1_image_a2()
-        self.section4_1_table_a2()
-        self.section4_1_image_a3()
-        # self.section4_2_table_a3()
-        # self.appendix_1()
-        # self.appendix_2()
-        # self.appendix_3()
+        self.section4_1_image()
+        self.section4_1_table()
+        self.section4_2_image()
+        self.section4_2_table()
+        self.appendix_1()
+        self.appendix_2()
+        self.appendix_3()
         self.doc.render(self.context)
         save_file = f'2-届KT获奖人获奖前后学术能力量化评估——{self.domain}领域.docx'
         self.doc.save(self.save_dir.joinpath(save_file))
