@@ -283,6 +283,7 @@ class DomainReport:
         input_file = OUTPUT_DIR.joinpath("A2-评价指标数据集.xlsx")
         df = pd.read_excel(input_file)
         df = df[df['研究领域'] == self.domain].copy()
+        names = df[df["时间窗口（0=获奖前5年，1=获奖后5年）"] == 0]["姓名"].values.tolist()
 
         data = []
         keys = [
@@ -290,18 +291,23 @@ class DomainReport:
             "论文篇均被引频次（B1）", "单篇最高被引频次（B2）", "前10%高影响力期刊或会议通讯作者论文数量占比（B3）",
             "专利被引频次（B4）"
         ]
-        for _, chunk in df.groupby(by=['姓名']):
-            chunk_0 = chunk[chunk['时间窗口（0=获奖前5年，1=获奖后5年）'] == 0].iloc[0]
+        for name in names:
+            chunk_0 = df[(df["时间窗口（0=获奖前5年，1=获奖后5年）"] == 0) & (df["姓名"] == name)].iloc[0]
             item = {"c1": chunk_0["姓名"]}
             i = 2
             for key in keys:
                 item[f"c{i}"] = chunk_0[key]
+                if key == "前10%高影响力期刊或会议通讯作者论文数量占比（B3）":
+                    item[f"c{i}"] = str(round(item[f"c{i}"] * 100)) + "%"
                 i += 1
-            chunk_1 = chunk[chunk['时间窗口（0=获奖前5年，1=获奖后5年）'] == 1].iloc[0]
+            chunk_1 = df[(df["时间窗口（0=获奖前5年，1=获奖后5年）"] == 1) & (df["姓名"] == name)].iloc[0]
             for key in keys:
                 item[f"c{i}"] = chunk_1[key]
+                if key == "前10%高影响力期刊或会议通讯作者论文数量占比（B3）":
+                    item[f"c{i}"] = str(round(item[f"c{i}"] * 100)) + "%"
                 i += 1
             data.append(item)
+
         self.context.update({
             'table_appendix_2': data
         })
