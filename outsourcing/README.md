@@ -14,3 +14,11 @@
 ```shell
 pip install openpyxl docxtpl pandas matplotlib pydantic dataclasses_json scipy pypinyin
 ```
+
+python docx-template https://zhuanlan.zhihu.com/p/366902690
+{%p jinja2_tag %} for paragraphs 段落，对应docx.text.paragraph.Paragraph对象
+{%tr jinja2_tag %} for table rows 表格中的一行，对应docx.table._Row对象
+{%tc jinja2_tag %} for table columns 表格中的一列，对应docx.table._Column对象
+{%r jinja2_tag %} for runs 段落中的一个片段，对应docx.text.run.Run对象
+{% hm %}表示水平合并单元格
+{% vm %}表示水平合并单元格

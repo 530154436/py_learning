@@ -19,7 +19,7 @@ class DomainReport:
         self.doc: DocxTemplate = DocxTemplate(template_file)
         self.context = dict()
         self.save_dir = OUTPUT_DIR.joinpath(self.domain)
-        self.winers = []
+        self.winners = []
         self.init()
 
     def init(self):
@@ -45,7 +45,7 @@ class DomainReport:
         winners["pinyin"] = winners["姓名"].apply(lazy_pinyin)
         winners = winners.sort_values("pinyin", ascending=True)
 
-        self.winers = winners["姓名"].tolist()
+        self.winners = winners["姓名"].tolist()
         num_winners = len(winners)
         avg_age = int(round(winners[f'年龄（截至统计年份-{CURRENT_YEAR}年）'].mean()))
         youngest = winners.loc[winners[f'年龄（截至统计年份-{CURRENT_YEAR}年）'].idxmin()]
@@ -361,14 +361,14 @@ class DomainReport:
                 tcPr.append(shd)
 
         # 遍历表格行（跳过表头）
-        print("获奖人：", self.winers)
+        print("获奖人：", self.winners)
         for i, row in enumerate(table.rows):
             if i == 0:  # 假设第一行为表头
                 print("表头：", [cell.text for cell in row.cells])
                 continue
             for j in range(len(row.cells)):
                 name = row.cells[j].text.strip()
-                if name in self.winers:
+                if name in self.winners:
                     set_row_background(row, "FFFF00")  # 黄色背景
                     break  # 找到就退出列循环
 
