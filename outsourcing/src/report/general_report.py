@@ -2,6 +2,9 @@
 import numpy as np
 import pandas as pd
 from docxtpl import DocxTemplate
+from pandas import DataFrame, Series
+from scipy import stats
+
 from analysis import RESEARCH_TYPE_MAPPING
 from config import DATASET_DIR, OUTPUT_DIR, CURRENT_YEAR, TIME_WINDOW_0_START, TIME_WINDOW_0_END, TIME_WINDOW_1_START, \
     TIME_WINDOW_1_END
@@ -116,12 +119,118 @@ class GeneralReport:
 
     def appendix_3(self):
         input_file = OUTPUT_DIR.joinpath("A3-差值分析数据集.xlsx")
-        _df = pd.read_excel(input_file)
+        df = pd.read_excel(input_file)
+        # 只保留获奖人（学者类型 = 1）
+        df = df[df['学者类型（获奖人=1，0=对照学者）'] == 1].reset_index(drop=True)
 
+        table_appendix_3 = []
+        for idx, row in enumerate(df.to_dict(orient="records"), start=1):
+            table_appendix_3.append({
+                'a1': idx,
+                'a2': row['姓名'],
+                'a3': row['研究领域'],
+                'a4': f"{row['差值-综合分数0']: .2f}",
+                'a5': f"{row['差值-学术生产力0']: .2f}",
+                'a6': f"{row['差值-学术影响力0']: .2f}",
+                'a7': f"{row['差值-综合分数1']: .2f}",
+                'a8': f"{row['差值-学术生产力1']: .2f}",
+                'a9': f"{row['差值-学术影响力1']: .2f}",
+                'a10': row['成长模式'],
+            })
+        self.context.update({
+            'table_appendix_3': table_appendix_3
+        })
+
+    def calc_ttest_rel(self, label, pre_diff: Series, post_diff: Series):
+        """ 计算：获奖人相对于对照组的“差距变化”是否显著
+            即：检验 (差值-综合分数1) vs (差值-综合分数0) 是否有显著变化
+        """
+        # 计算“差距的变化”：post_diff - pre_diff
+        diff_change = post_diff - pre_diff
+
+        n = len(diff_change)
+        mean_diff = diff_change.mean()
+        std_dev = diff_change.std()
+        std_err = std_dev / np.sqrt(n)
+
+        # 95% 置信区间
+        ci = stats.t.interval(0.95, df=n - 1, loc=mean_diff, scale=std_err)
+        ci_lower, ci_upper = ci
+
+        # 配对样本 t 检验：检验“差距变化”是否显著不为0
+        t_stat, p_value = stats.ttest_rel(post_diff, pre_diff)  # 等价于 ttest_1samp(diff_change, 0)
+        return {
+            'a1': label,                # 指标
+            'a2': round(mean_diff, 2),  # 均值差值
+            'a3': round(std_dev, 2),    # 标准差
+            'a4': round(std_err, 2),    # 均值的标准误差
+            'a5': round(ci_lower, 2),   # CI下限
+            'a6': round(ci_upper, 2),   # CI上限
+            'a7': round(t_stat, 2),     # t
+            'a8': n - 1,                # df
+            'a9': round(p_value, 2)     # Sig.(双侧)
+        }
+
+    def appendix_4(self):
+        input_file = OUTPUT_DIR.joinpath("A3-差值分析数据集.xlsx")
+        df = pd.read_excel(input_file)
+        df = df[df['学者类型（获奖人=1，0=对照学者）'] == 1].copy()
+        # 定义要检验的指标
+        changes = {
+            '综合分数1-\r综合分数0': ('差值-综合分数0', '差值-综合分数1'),
+            '学术生产力1-\r学术生产力0': ('差值-学术生产力0', '差值-学术生产力1'),
+            '学术影响力1-\r学术影响力0': ('差值-学术影响力0', '差值-学术影响力1')
+        }
+        table_appendix_4 = []
+        for label, (pre_diff_col, post_diff_col) in changes.items():
+            pre_diff = df[pre_diff_col]     # 获奖前，获奖人比对照组高/低多少
+            post_diff = df[post_diff_col]   # 获奖后，获奖人比对照组高/低多少
+            table_appendix_4.append(self.calc_ttest_rel(label, pre_diff, post_diff))
+        self.context.update({
+            'table_appendix_4': table_appendix_4
+        })
+
+    def appendix_5(self):
+        # TODO: 数量不对
+        # 表格
+        input_file = OUTPUT_DIR.joinpath("A4-胜率分析数据集.xlsx")
+        df = pd.read_excel(input_file)
+        df = df[df['学者类型（获奖人=1，0=对照学者）'] == 1].copy()
+        print(df.shape)
+
+        labels = ["胜率-综合分数0", "胜率-综合分数1"]
+        keys = ["获奖前5年", "获奖后5年"]
+        table_appendix_5 = []
+        # 分析文本中用到的变量
+        appendix_5_text = dict()
+        for key, label in zip(keys, labels):
+            df["胜率"] = df[label].apply(lambda x: float(x.strip("%")))
+            num_50_100 = (df["胜率"] > 50).sum()
+            table_appendix_5.append({
+                'a1': key,
+                'a2': f'{(df["胜率"] <= 0).sum()}人',
+                'a3': f'{((df["胜率"] > 0) & (df["胜率"] <= 50)).sum()}人',
+                'a4': f'{num_50_100}人',
+            })
+            if key == "获奖前5年":
+                appendix_5_text["b1"] = num_50_100
+                appendix_5_text["b2"] = f"{int(round(num_50_100/df.shape[0], 2) * 100)}%"
+            if key == "获奖后5年":
+                appendix_5_text["c1"] = num_50_100
+                appendix_5_text["c2"] = f"{int(round(num_50_100 / df.shape[0], 2) * 100)}%"
+        appendix_5_text["d"] = "提高" if appendix_5_text["c1"] > appendix_5_text["b1"] else "降低"
+
+        self.context.update({
+            'appendix_5_table': table_appendix_5,
+            'appendix_5_text': appendix_5_text,
+        })
 
     def run(self):
-        # self.appendix_1()  # 第1列合并有问题
+        self.appendix_1()  # 第1列合并有问题
         self.appendix_2()
+        self.appendix_3()
+        self.appendix_4()
+        self.appendix_5()
 
         self.doc.render(self.context)
         save_file = f'1-首届获奖人获奖前后学术能力量化评估综合报告.docx'
