@@ -28,9 +28,6 @@ class ScholarDescriptionEntity(ScholarIdGroupEntity):
     total_sci_pub_10_years: int = field(metadata=config(field_name="10年SCI论文总发文量"))
     total_meeting_pub_10_years: int = field(metadata=config(field_name="10年会议论文总发文量"))
     total_preprint_pub_10_years: int = field(metadata=config(field_name="10年预印本总发文量"))
-    total_pub_until_tw_0_end: int = field(metadata=config(field_name=f"{TIME_WINDOW_0_END}年之前总发文量"))
-    total_cits_until_tw_0_end: int = field(metadata=config(field_name=f"{TIME_WINDOW_0_END}年之前论文总被引频次"))
-    avg_cits_per_paper_until_tw_0_end: float = field(metadata=config(field_name=f"{TIME_WINDOW_0_END}年之前论文篇均被引频次"))
 
     total_cits_10_years: int = field(metadata=config(field_name="10年论文总被引频次"))
     avg_cits_10_years: float = field(metadata=config(field_name="10年论文篇均被引频次"))
@@ -46,6 +43,21 @@ class ScholarDescriptionEntity(ScholarIdGroupEntity):
     career_patent_families_num: int = field(metadata=config(field_name="学者职业生涯专利族数量"))
     patent_families_num_10_years: int = field(metadata=config(field_name="10年专利族数量"))
     patent_citations_10_years: int = field(metadata=config(field_name="10年专利被引频次"))
+
+    # 补充指标
+    tw_0_end_total_pub: int = field(metadata=config(field_name=f"学者职业生涯发文总量（截止{TIME_WINDOW_0_END}年）"))
+    tw_0_end_total_cits: int = field(metadata=config(field_name=f"学者职业生涯总被引次数（截止{TIME_WINDOW_0_END}年）"))
+    tw_0_end_avg_cits_per_paper: float = field(metadata=config(field_name=f"职业生涯篇均被引（截止{TIME_WINDOW_0_END}年）"))
+    tw_0_end_career_length: int = field(metadata=config(field_name=f"学者职业生涯长度（截止{TIME_WINDOW_0_END}年）"))
+    tw_0_end_active_years: int = field(metadata=config(field_name=f"学者活跃年数（截止{TIME_WINDOW_0_END}年）"))
+    tw_0_end_active_ratio: str = field(metadata=config(field_name=f"职业生涯学术活跃期占比（截止{TIME_WINDOW_0_END}年）"))
+
+    pre5_active_ratio: str = field(metadata=config(field_name=f"获奖前5年学术活跃期占比"))
+    pre5_total_pub: int = field(metadata=config(field_name=f"获奖前5年发文总量"))
+    pre5_total_cits: int = field(metadata=config(field_name=f"获奖前5年总被引次数"))
+    pre5_avg_cits_per_paper: float = field(metadata=config(field_name=f"获奖前5年篇均被引"))
+    pre5_total_top_pub: int = field(metadata=config(field_name=f"获奖前5年顶刊/会议论文数"))
+    pre5_total_top_pub_ratio: str = field(metadata=config(field_name=f"获奖前5年顶刊/会议论文比例"))
 
 
 class ScholarDescription(AbstractBase):
@@ -117,20 +129,6 @@ class ScholarDescription(AbstractBase):
         total_preprint_pub_10_years = df[mask]["UT (Unique WOS ID)"].nunique(dropna=True)
         print(f"10年预印本总发文量:", total_preprint_pub_10_years)
 
-        # 10、2019年之前总发文量
-        df_sub = df[df["Publication Year"] <= TIME_WINDOW_0_END]
-        total_pub_until_tw_0_end = df_sub["UT (Unique WOS ID)"].nunique(dropna=True)
-        print(f"{TIME_WINDOW_0_END}年之前总发文量:", total_pub_until_tw_0_end)
-
-        # 11、2019年之前总被引频次
-        sum_citations_per_paper = self.calc_citations_per_paper(df_sub, start_year=1900, end_year=TIME_WINDOW_0_END)
-        total_cits_until_tw_0_end = sum_citations_per_paper.sum()
-        print(f"{TIME_WINDOW_0_END}年之前总被引频次:", total_cits_until_tw_0_end)
-
-        # 12、2019年之前篇均被引频次
-        avg_cits_per_paper_until_tw_0_end = sum_citations_per_paper.mean()
-        print(f"{TIME_WINDOW_0_END}年之前篇均被引频次:", avg_cits_per_paper_until_tw_0_end)
-
         # 13、10年论文总被引频次
         df_sub = df[(df["Publication Year"] >= TIME_WINDOW_0_START) & (df["Publication Year"] <= TIME_WINDOW_1_END)]
         sum_citations_per_paper = self.calc_citations_per_paper(df_sub, start_year=TIME_WINDOW_0_START, end_year=TIME_WINDOW_1_END)
@@ -162,6 +160,65 @@ class ScholarDescription(AbstractBase):
         avg_cits_corr_author_papers_10_years = round(sum_citations_per_paper.mean(), ndigits=2)
         print("10年通讯作者论文篇均被引:", avg_cits_corr_author_papers_10_years)
 
+        # ------------------------------------------------------------------------------------------------
+        # 补充指标：截止2019年
+        # ------------------------------------------------------------------------------------------------
+        df_tw_0_end = df[df["Publication Year"] <= TIME_WINDOW_0_END]
+        # 学者职业生涯发文总量（截止2019年）
+        tw_0_end_total_pub = df_tw_0_end["UT (Unique WOS ID)"].nunique(dropna=True)
+        print(f"学者职业生涯发文总量（截止{TIME_WINDOW_0_END}年）", tw_0_end_total_pub)
+
+        # 学者职业生涯总被引次数（截止2019年）
+        sum_citations_per_paper = self.calc_citations_per_paper(df_tw_0_end, start_year=1900, end_year=TIME_WINDOW_0_END)
+        tw_0_end_total_cits = sum_citations_per_paper.sum()
+        print(f"学者职业生涯总被引次数（截止{TIME_WINDOW_0_END}年）:", tw_0_end_total_cits)
+
+        # 职业生涯篇均被引（截止2019年）
+        tw_0_end_avg_cits_per_paper = round(sum_citations_per_paper.mean(), ndigits=2)
+        print(f"职业生涯篇均被引（截止{TIME_WINDOW_0_END}年）:", tw_0_end_avg_cits_per_paper)
+
+        # 学者职业生涯长度（截止2019年 ）
+        tw_0_end_career_length = TIME_WINDOW_0_END - int(first_paper_year) + 1
+        print(f"学者职业生涯长度（截止{TIME_WINDOW_0_END}年 ）:", tw_0_end_career_length)
+
+        # 学者活跃年数（截止2019年）
+        tw_0_end_active_years = df_tw_0_end["Publication Year"].nunique(dropna=True)
+        print("学者活跃年数:", tw_0_end_active_years)
+
+        # 职业生涯学术活跃期占比（截止2019）:截止2019年职业生涯中发表不少于1篇的年份/职业生涯长度（截止2019）
+        tw_0_end_active_ratio = f"{int(round(tw_0_end_active_years / tw_0_end_career_length, ndigits=2) * 100)}%"
+        print("职业生涯学术活跃期占比（截止2019）:", tw_0_end_active_ratio)
+
+        # ------------------------------------------------------------------------------------------------
+        # 补充指标：获奖前5年
+        # ------------------------------------------------------------------------------------------------
+        # 获奖前5年学术活跃期占比
+        df_pre5 = df[(df["Publication Year"] >= TIME_WINDOW_0_START) & (df["Publication Year"] <= TIME_WINDOW_0_END)]
+        pre5_active_years = df_pre5["Publication Year"].nunique(dropna=True)
+        pre5_active_ratio = f"{int(round(pre5_active_years / 5, ndigits=2) * 100)}%"
+        print("获奖前5年学术活跃期占比:", pre5_active_ratio)
+        print(df_pre5.columns)
+
+        # 获奖前5年发文总量
+        pre5_total_pub = df_pre5["UT (Unique WOS ID)"].nunique(dropna=True)
+        print(f"获奖前5年发文总量:", pre5_total_pub)
+
+        # 获奖前5年总被引次数
+        sum_citations_per_paper = self.calc_citations_per_paper(df_pre5, start_year=TIME_WINDOW_0_START, end_year=TIME_WINDOW_0_END)
+        pre5_total_cits = sum_citations_per_paper.sum()
+        print(f"获奖前5年总被引次数:", pre5_total_cits)
+
+        # 获奖前5年篇均被引
+        pre5_avg_cits_per_paper = round(sum_citations_per_paper.mean(), ndigits=2)
+        print(f"获奖前5年篇均被引:", pre5_avg_cits_per_paper)
+
+        # 获奖前5年顶刊/会议论文数
+        mask_pre5 = df_pre5["is_top_journal_confer（1=yes,0=no,preprint=preprint,other=null）"] == 1
+        pre5_total_top_pub = df_pre5[mask_pre5]["UT (Unique WOS ID)"].nunique(dropna=True)
+
+        # 获奖前5年顶刊/会议论文比例
+        pre5_total_top_pub_ratio = f"{int(round(pre5_total_top_pub / pre5_total_pub, ndigits=2) * 100)}%"
+
         return dict(
             career_length=career_length,
             active_years=active_years,
@@ -172,14 +229,25 @@ class ScholarDescription(AbstractBase):
             total_sci_pub_10_years=total_sci_pub_10_years,
             total_meeting_pub_10_years=total_meeting_pub_10_years,
             total_preprint_pub_10_years=total_preprint_pub_10_years,
-            total_pub_until_tw_0_end=total_pub_until_tw_0_end,
-            total_cits_until_tw_0_end=total_cits_until_tw_0_end,
-            avg_cits_per_paper_until_tw_0_end=avg_cits_per_paper_until_tw_0_end,
             total_cits_10_years=total_cits_10_years,
             avg_cits_10_years=avg_cits_10_years,
             total_corr_author_papers_10_years=total_corr_author_papers_10_years,
             total_cits_corr_author_papers_10_years=total_cits_corr_author_papers_10_years,
             avg_cits_corr_author_papers_10_years=avg_cits_corr_author_papers_10_years,
+
+            tw_0_end_total_pub=tw_0_end_total_pub,
+            tw_0_end_total_cits=tw_0_end_total_cits,
+            tw_0_end_avg_cits_per_paper=tw_0_end_avg_cits_per_paper,
+            tw_0_end_career_length=tw_0_end_career_length,
+            tw_0_end_active_years=tw_0_end_active_years,
+            tw_0_end_active_ratio=tw_0_end_active_ratio,
+
+            pre5_active_ratio=pre5_active_ratio,
+            pre5_total_pub=pre5_total_pub,
+            pre5_total_cits=pre5_total_cits,
+            pre5_avg_cits_per_paper=pre5_avg_cits_per_paper,
+            pre5_total_top_pub=pre5_total_top_pub,
+            pre5_total_top_pub_ratio=pre5_total_top_pub_ratio,
         )
 
     def calc_one_in_patent(self, df: pd.DataFrame) -> dict:

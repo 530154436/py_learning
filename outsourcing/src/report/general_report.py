@@ -191,7 +191,6 @@ class GeneralReport:
         })
 
     def appendix_5(self):
-        # TODO: 数量不对
         # 表格
         input_file = OUTPUT_DIR.joinpath("A4-胜率分析数据集.xlsx")
         df = pd.read_excel(input_file)
@@ -215,7 +214,7 @@ class GeneralReport:
             if key == "获奖前5年":
                 appendix_5_text["b1"] = num_50_100
                 appendix_5_text["b2"] = f"{int(round(num_50_100/df.shape[0], 2) * 100)}%"
-            if key == "获奖后5年":
+            elif key == "获奖后5年":
                 appendix_5_text["c1"] = num_50_100
                 appendix_5_text["c2"] = f"{int(round(num_50_100 / df.shape[0], 2) * 100)}%"
         appendix_5_text["d"] = "提高" if appendix_5_text["c1"] > appendix_5_text["b1"] else "降低"
