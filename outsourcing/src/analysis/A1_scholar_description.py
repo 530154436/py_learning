@@ -54,6 +54,7 @@ class ScholarDescriptionEntity(ScholarIdGroupEntity):
 
     pre5_active_ratio: str = field(metadata=config(field_name=f"获奖前5年学术活跃期占比"))
     pre5_total_pub: int = field(metadata=config(field_name=f"获奖前5年发文总量"))
+    pre5_avg_pub: float = field(metadata=config(field_name=f"获奖前5年年均发文量"))
     pre5_total_cits: int = field(metadata=config(field_name=f"获奖前5年总被引次数"))
     pre5_avg_cits_per_paper: float = field(metadata=config(field_name=f"获奖前5年篇均被引"))
     pre5_total_top_pub: int = field(metadata=config(field_name=f"获奖前5年顶刊/会议论文数"))
@@ -203,6 +204,10 @@ class ScholarDescription(AbstractBase):
         pre5_total_pub = df_pre5["UT (Unique WOS ID)"].nunique(dropna=True)
         print(f"获奖前5年发文总量:", pre5_total_pub)
 
+        # 获奖前5年年均发文量
+        pre5_avg_pub = round(pre5_total_pub / 5, ndigits=2)
+        print(f"获奖前5年年均发文量:", pre5_avg_pub)
+
         # 获奖前5年总被引次数
         sum_citations_per_paper = self.calc_citations_per_paper(df_pre5, start_year=TIME_WINDOW_0_START, end_year=TIME_WINDOW_0_END)
         pre5_total_cits = sum_citations_per_paper.sum()
@@ -247,6 +252,7 @@ class ScholarDescription(AbstractBase):
             pre5_total_cits=pre5_total_cits,
             pre5_avg_cits_per_paper=pre5_avg_cits_per_paper,
             pre5_total_top_pub=pre5_total_top_pub,
+            pre5_avg_pub=pre5_avg_pub,
             pre5_total_top_pub_ratio=pre5_total_top_pub_ratio,
         )
 
