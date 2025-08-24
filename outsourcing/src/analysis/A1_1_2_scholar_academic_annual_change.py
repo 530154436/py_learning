@@ -8,9 +8,8 @@ from utils.pd_common_util import contains_in
 
 
 class ScholarAcademicAnnualChange(AbstractBase):
-    __tbl_name_1__ = "A1.1-学者学术能力年度趋势"
+    __tbl_name__ = "A1.1-学者学术能力年度趋势"
     __tbl_name_2__ = "A1.2-学者学术能力年度趋势-年维度"
-    __tbl_name_3__ = "A1.3-群体学术能力年度趋势"
 
     def __init__(self, basic_info_path: Path,
                  data_paper_path: Path, data_patent_path: Path):
@@ -57,13 +56,13 @@ class ScholarAcademicAnnualChange(AbstractBase):
             year_total_cits = int(sum_citations_per_paper.sum())
             result[f"{year}年度总被引次数（截止{TIME_WINDOW_1_END}）"] = year_total_cits
 
-            # xxx年度总被引次数（截止2024）：统计目标年份发表的论文，从发表到2024年累积的引用次数。
+            # xxx年度篇均被引频次（截止2024）：统计目标年份发表的论文，从发表到2024年的篇均引用次数。
             year_avg_cits = round(sum_citations_per_paper.mean(), 2)
             result[f"{year}年度篇均被引频次（截止{TIME_WINDOW_1_END}）"] = year_avg_cits
 
-            # xxxx年度引用累积年数（截止2024）=2024-发表年份
+            # xxxx年度引用累积年数（截止2024）: \sum{每篇论文的累积年数 = 2024 - 发表年份 + 1}
             # xxxx年度年均引用率（截止2024）=年度总被引次数（截止2024）/ 年度引用累积年数（截止2024）
-            result[f"{year}年度引用累积年数"] = TIME_WINDOW_1_END - year + 1
+            result[f"{year}年度引用累积年数"] = (TIME_WINDOW_1_END - year + 1) * sum_citations_per_paper.count()
             result[f"{year}年度年均引用率（截止{TIME_WINDOW_1_END}）"] = round(year_total_cits/(2024 - year + 1), ndigits=2)
 
             # xxxx年度当年被引次数：目标年份内发表的论文在同年获得的引用总次数
@@ -88,7 +87,7 @@ class ScholarAcademicAnnualChange(AbstractBase):
             df_pre5_year = df[(year-4 <= df["Publication Year"]) & (df["Publication Year"] <= year)]
 
             # 近5年发表论文2015年发文总量
-            pre5_year_total_pub = df_year["UT (Unique WOS ID)"].nunique(dropna=True)
+            pre5_year_total_pub = df_pre5_year["UT (Unique WOS ID)"].nunique(dropna=True)
             result[f"近5年发表论文{year}年发文总量"] = pre5_year_total_pub
 
             # 近5年发表论文2015年累计总被引次数
@@ -126,10 +125,10 @@ class ScholarAcademicAnnualChange(AbstractBase):
         df_paper = self.preprocessing_paper_data(df_paper)
         data = []
         for i, row in enumerate(df_basic_info.to_dict(orient="records"), start=1):
-            _id, name = row["学者唯一ID"], row["姓名"]
+            _id, name, scholar_type = row["学者唯一ID"], row["姓名"], row["学者类型（获奖人=1，0=对照学者）"]
             df = df_paper[df_paper["姓名"] == name]
             print(f"{i:03d}/{df_basic_info.shape[0]}: 学者唯一ID={_id}, 姓名={name}, 论文数量={df.shape[0]}")
-            result = OrderedDict({"学者唯一ID": _id, "姓名": name})
+            result = OrderedDict({"学者唯一ID": _id, "姓名": name, "学者类型（获奖人=1，0=对照学者）": scholar_type})
             index = self.calc_one_in_paper(df, start_year=TIME_WINDOW_0_START, end_year=TIME_WINDOW_1_END)
             result.update(index)
             data.append(result)
@@ -143,10 +142,10 @@ class ScholarAcademicAnnualChange(AbstractBase):
         df_patent = pd.read_excel(self.data_patent_path)
         data = []
         for i, row in enumerate(df_basic_info.to_dict(orient="records"), start=1):
-            _id, name = row["学者唯一ID"], row["姓名"]
+            _id, name, scholar_type = row["学者唯一ID"], row["姓名"], row["学者类型（获奖人=1，0=对照学者）"]
             df = df_patent[df_patent["姓名"] == name]
             print(f"{i:03d}/{df_basic_info.shape[0]}: 学者唯一ID={_id}, 姓名={name}, 专利数量={df.shape[0]}")
-            result = {"学者唯一ID": _id, "姓名": name}
+            result = OrderedDict({"学者唯一ID": _id, "姓名": name, "学者类型（获奖人=1，0=对照学者）": scholar_type})
             index = self.calc_one_in_patent(df, start_year=TIME_WINDOW_0_START, end_year=TIME_WINDOW_1_END)
             result.update(index)
             data.append(result)
@@ -155,13 +154,42 @@ class ScholarAcademicAnnualChange(AbstractBase):
     def calc_a1_1(self):
         df_paper = self.calc_paper()
         df_patent = self.calc_patent()
-        df = pd.merge(df_paper, df_patent, how="inner", on=["学者唯一ID", "姓名"])
-        self.save_to_excel(df, save_file=self.__tbl_name_1__)
+        df = pd.merge(df_paper, df_patent, how="inner", on=["学者唯一ID", "姓名", "学者类型（获奖人=1，0=对照学者）"])
+        self.save_to_excel(df, save_file=self.__tbl_name__ + ".xlsx")
 
     def calc_a1_2(self):
-        df = pd.read_excel(OUTPUT_DIR.joinpath(self.__tbl_name_1__ + ".xlsx"))
-        print(df)
-        self.save_to_excel(df, save_file=self.__tbl_name_2__)
+        """ 宽表转长表（或称“数据透视”）
+        """
+        df = pd.read_excel(OUTPUT_DIR.joinpath(self.__tbl_name__ + ".xlsx"))
+        id_vars = ['学者唯一ID', '姓名', '学者类型（获奖人=1，0=对照学者）']
+        cols_to_transform = [col for col in df.columns if col not in id_vars]
+        # 熔化数据，将所有年度列转换为长格式
+        df_melted = df.melt(
+            id_vars=id_vars,  # 保持不变的列
+            value_vars=cols_to_transform,  # 要转换的列
+            var_name='original_column',  # 熔化后，原列名所在的列名
+            value_name='指标值'  # 熔化后，值所在的列名
+        )
+        # 提取年份：匹配开头的4位数字
+        df_melted['年份'] = df_melted['original_column'].str.extract(r'(\d{4})')
+        # 提取指标名称 (去掉年份和"年度"/"年")
+        df_melted['指标'] = df_melted['original_column'].str.replace(r'\d{4}(?:年度|年)', '', regex=True)
+
+        # 使用 pivot 将 '指标' 列展开为多个列，pivot 的 index 是 ['姓名', '年份'], columns 是 '指标', values 是 '指标值'
+        result_df = df_melted.pivot_table(
+            index=['学者唯一ID', '姓名', '学者类型（获奖人=1，0=对照学者）', '年份'],  # 多级索引
+            columns='指标',
+            values='指标值',
+            aggfunc='first'  # 因为每个组合唯一，用 first 即可
+        ).reset_index()  # 将索引变回普通列
+
+        # 清理列名 (pivot 后列名会变成 MultiIndex，我们需要扁平化)
+        # 对于非 MultiIndex，这步可能不需要，但为了保险
+        result_df.columns.name = None  # 移除列级别的名称
+        # 按 学者唯一ID 和 年份 排序
+        result_df = result_df.sort_values(['学者唯一ID', '姓名', '年份']).reset_index(drop=True)
+
+        self.save_to_excel(result_df, save_file=self.__tbl_name_2__ + ".xlsx")
 
 
 if __name__ == "__main__":
@@ -170,5 +198,5 @@ if __name__ == "__main__":
     _input_file2 = DATASET_DIR.joinpath("S0.1-原始数据表-249人学术生涯论文数据汇总.xlsx")
     _input_file3 = DATASET_DIR.joinpath("S0.2-原始数据表-249人学术生涯专利数据汇总.xlsx")
     _object = ScholarAcademicAnnualChange(_input_file1, data_paper_path=_input_file2, data_patent_path=_input_file3)
-    # _object.calc_a1_1()
+    _object.calc_a1_1()
     _object.calc_a1_2()

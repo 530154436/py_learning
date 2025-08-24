@@ -16,7 +16,10 @@ class ScholarDescriptionEntity(ScholarIdGroupEntity):
     """
     学者描述信息（包含统计指标）
     """
+    scholar_type: int = field(metadata=config(field_name=f"学者类型（获奖人=1，0=对照学者）"))
+
     # 统计类指标
+    first_paper_year: int = field(metadata=config(field_name=f"首篇论文发表年份"))
     career_length: int = field(metadata=config(field_name=f"学者职业生涯长度"))
     active_years: int = field(metadata=config(field_name="学者活跃年数"))
     career_total_pub: int = field(metadata=config(field_name="学者职业生涯总发文量"))
@@ -24,11 +27,13 @@ class ScholarDescriptionEntity(ScholarIdGroupEntity):
     # career_total_meeting_pub: int = field(metadata=config(field_name="学者职业生涯会议论文总发文量"))
     h_index_tw_0_years: int = field(metadata=config(field_name=f"{TIME_WINDOW_0_END}年学者H指数（截止到{TIME_WINDOW_0_END}年）"))
     h_index_tw_1_years: int = field(metadata=config(field_name=f"{TIME_WINDOW_1_END}年学者H指数（截止到{TIME_WINDOW_1_END}年）"))
+
+    first_paper_year_10_years: int = field(metadata=config(field_name=f"10年首篇论文发表年份"))
+    paper_year_set_10_years: str = field(metadata=config(field_name=f"10年论文发表年份集合"))
     total_pub_10_years: int = field(metadata=config(field_name="10年总发文量"))
     total_sci_pub_10_years: int = field(metadata=config(field_name="10年SCI论文总发文量"))
     total_meeting_pub_10_years: int = field(metadata=config(field_name="10年会议论文总发文量"))
     total_preprint_pub_10_years: int = field(metadata=config(field_name="10年预印本总发文量"))
-
     total_cits_10_years: int = field(metadata=config(field_name="10年论文总被引频次"))
     avg_cits_10_years: float = field(metadata=config(field_name="10年论文篇均被引频次"))
     total_corr_author_papers_10_years: int = field(metadata=config(field_name="10年通讯作者论文总数"))
@@ -101,9 +106,16 @@ class ScholarDescription(AbstractBase):
         h_index_tw_1_years = self.calc_h_index(sum_citations_per_paper.tolist())
         print(f"学者H指数：截止到{TIME_WINDOW_1_END}年:", h_index_tw_1_years)
 
-        # 6、10年总发文量
+        # ------------------------------------------------------------------------------------------------
+        # 补充指标：10年内时间窗口
+        # ------------------------------------------------------------------------------------------------
         mask_10_year = (TIME_WINDOW_0_START <= df["Publication Year"]) & \
                        (df["Publication Year"] <= TIME_WINDOW_1_END)
+        # 10年最早发表年份
+        first_paper_year_10_years = df[mask_10_year]["Publication Year"].astype(int).min()
+        paper_year_set_10_years = ";".join(df[mask_10_year]["Publication Year"].unique().astype(str))
+
+        # 6、10年总发文量
         total_pub_10_years = df[mask_10_year]["UT (Unique WOS ID)"].nunique(dropna=True)
         print(f"10年总发文量（不区分Document Type）：", total_pub_10_years)
 
@@ -225,11 +237,15 @@ class ScholarDescription(AbstractBase):
         pre5_total_top_pub_ratio = f"{int(round(pre5_total_top_pub / pre5_total_pub, ndigits=2) * 100)}%"
 
         return dict(
+            first_paper_year=first_paper_year,
             career_length=career_length,
             active_years=active_years,
             career_total_pub=career_total_pub,
             h_index_tw_0_years=h_index_tw_0_years,
             h_index_tw_1_years=h_index_tw_1_years,
+
+            first_paper_year_10_years=first_paper_year_10_years,
+            paper_year_set_10_years=paper_year_set_10_years,
             total_pub_10_years=total_pub_10_years,
             total_sci_pub_10_years=total_sci_pub_10_years,
             total_meeting_pub_10_years=total_meeting_pub_10_years,
@@ -342,7 +358,7 @@ class ScholarDescription(AbstractBase):
                   f"学者唯一ID={_id}, 姓名={name}, "
                   f"任务类型={data_type}, 数据行数={df_data_subset.shape[0]}")
 
-            result = {"id": _id, "name": name}
+            result = {"id": _id, "name": name, "scholar_type": row["学者类型（获奖人=1，0=对照学者）"]}
             if data_type == DataType.paper:
                 metric = self.calc_one_in_paper(df_data_subset.copy())
             elif data_type == DataType.patent:
@@ -366,8 +382,8 @@ class ScholarDescription(AbstractBase):
         # df_patent = pd.read_excel(OUTPUT_DIR.joinpath(f"{self.__tbl_name__}-{DataType.patent}.xlsx"))
         # df_patent_families = pd.read_excel(OUTPUT_DIR.joinpath(f"{self.__tbl_name__}-{DataType.patent_families}.xlsx"))
 
-        df_data = pd.merge(df_paper, df_patent, on=["id", "name"], how="inner")
-        df_data = pd.merge(df_data, df_patent_families, on=["id", "name"], how="inner")
+        df_data = pd.merge(df_paper, df_patent, on=["id", "name", "scholar_type"], how="inner")
+        df_data = pd.merge(df_data, df_patent_families, on=["id", "name", "scholar_type"], how="inner")
 
         self.export_to_excel(df_data, clazz=ScholarDescriptionEntity)
 
