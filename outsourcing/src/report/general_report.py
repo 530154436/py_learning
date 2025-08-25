@@ -1,19 +1,22 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import pandas as pd
-from docxtpl import DocxTemplate
+from docx.shared import Mm
+from docxtpl import DocxTemplate, InlineImage
 from pandas import DataFrame, Series
 from scipy import stats
 
 from analysis import RESEARCH_TYPE_MAPPING
 from config import DATASET_DIR, OUTPUT_DIR, CURRENT_YEAR, TIME_WINDOW_0_START, TIME_WINDOW_0_END, TIME_WINDOW_1_START, \
     TIME_WINDOW_1_END
+from utils.plot_util import plot_line_chart
 
 
 class GeneralReport:
 
     def __init__(self, template_file: str):
         self.doc: DocxTemplate = DocxTemplate(template_file)
+        self.save_dir = OUTPUT_DIR.joinpath("00-综合报告")
         self.context = dict()
         self.winners = []
         self.init()
@@ -26,6 +29,61 @@ class GeneralReport:
             'TIME_WINDOW_1_START': TIME_WINDOW_1_START,
             'TIME_WINDOW_1_END': TIME_WINDOW_1_END,
         }
+        if not self.save_dir.exists():
+            self.save_dir.mkdir(parents=True)
+
+    def section_3_2_image(self):
+        input_file = OUTPUT_DIR.joinpath("A1.3-群体学术能力年度趋势.xlsx")
+        df = pd.read_excel(input_file)
+
+        # 1、计算指标
+        for year in range(TIME_WINDOW_0_START, TIME_WINDOW_1_END + 1):
+            df[f"{year}平均发文量/篇"] = np.round(df[f"{year}年度发文总量"] / df["学者人数"], 2)
+            df[f"{year}年均引用率（截止{TIME_WINDOW_1_END}）"] = df[f"群体{year}年均引用率（截止{TIME_WINDOW_1_END}）"]
+            df[f"{year}ACPP"] = df[f"群体{year}ACPP"]
+            df[f"{year}年度当年篇均被引频次"] = df[f"{year}年度当年篇均被引频次"]
+            df[f"{year}年度高影响力论文占比/百分比"] = df[f"{year}年度高影响力论文占比"].apply(lambda x: int(x * 100))
+            df[f"{year}年平均专利族数量"] = np.round(df[f"{year}年度专利族数量"] / df["学者人数"], 2)
+
+        # 2、绘制折线图
+        metrics = [
+            # 图3-1. 获奖人与对照学者发文量年度变化
+            ("{year}平均发文量/篇", self.save_dir.joinpath("image_3_1.png")),
+            # 图3-2-1. 获奖人与对照学者年均引用率（截止2024）
+            ("{year}年均引用率"+f"（截止{TIME_WINDOW_1_END}）", self.save_dir.joinpath("image_3_2_1.png")),
+            # 图3-2-2. 获奖人与对照学者ACPP
+            ("{year}ACPP", self.save_dir.joinpath("image_3_2_2.png")),
+            # 图3-2-3. 获奖人与对照学者年度当年篇均被引频次
+            ("{year}年度当年篇均被引频次", self.save_dir.joinpath("image_3_2_3.png")),
+            # 图3-3. 获奖人与对照学者高影响力论文占比年度变化
+            ("{year}年度高影响力论文占比/百分比", self.save_dir.joinpath("image_3_3.png")),
+            # 图3-4. 获奖人与对照学者专利族数量年度变化
+            ("{year}年平均专利族数量", self.save_dir.joinpath("image_3_4.png")),
+        ]
+        x_data = list(map(lambda x: str(x), range(TIME_WINDOW_0_START, TIME_WINDOW_1_END + 1)))
+        labels = ["获奖人", "对照学者"]
+        for y_label, save_file in metrics:
+            print(f"折线图: {y_label}")
+            # 组装数据
+            y_data = []
+            for scholar_type, label in zip([1, 0], labels):
+                row = df[df["学者类型（获奖人=1，0=对照学者）"] == scholar_type].iloc[0]
+                y_data_i = []
+                for year in x_data:
+                    y_data_i.append(row[y_label.format(year=year)])
+                y_data.append(y_data_i)
+            # 调用绘图函数
+            y_label_show = y_label.format(year="")
+            plot_line_chart(
+                x_data=x_data,
+                y_data=y_data,
+                labels=labels,
+                title=None,
+                x_label="年份",
+                y_label=y_label_show,
+                output_path=save_file,
+            )
+            self.context.update({save_file.stem: InlineImage(self.doc, str(save_file), width=Mm(140))})
 
     def appendix_1(self):
         input_file = DATASET_DIR.joinpath("S2.2-学者关联信息表-对照分组.xlsx")
@@ -225,6 +283,8 @@ class GeneralReport:
         })
 
     def run(self):
+        self.section_3_2_image()
+
         self.appendix_1()  # 第1列合并有问题
         self.appendix_2()
         self.appendix_3()
@@ -233,7 +293,7 @@ class GeneralReport:
 
         self.doc.render(self.context)
         save_file = f'1-首届获奖人获奖前后学术能力量化评估综合报告.docx'
-        self.doc.save(OUTPUT_DIR.joinpath(save_file))
+        self.doc.save(self.save_dir.joinpath(save_file))
         print(save_file)
 
 

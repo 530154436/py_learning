@@ -2,12 +2,14 @@
 import pandas as pd
 from docx.shared import Mm
 from docxtpl import DocxTemplate, InlineImage
+
+from config import DATASET_DIR, DEMO_DIR
 from utils.doc_tpl_util import merge_table_column
-from utils.plot_util import plot_line_char_by_df
+from utils.plot_util import plot_line_char_by_df, plot_line_chart
 
 
 def main():
-    doc = DocxTemplate("../data/demo/WordTemplate.docx")
+    doc = DocxTemplate(DEMO_DIR.joinpath("WordTemplate.docx"))
     context = dict()
 
     # 1.变量替换
@@ -27,10 +29,24 @@ def main():
     context.update({"metrics": metrics})
 
     # 3.导入excel表格数据并绘制折线图嵌入到doc
-    df = pd.read_excel("data/demo/data.xlsx")
-    image_path = "../data/demo/image.png"
-    plot_line_char_by_df(df, x_col="姓名", y_cols=["综合分数"], title="综合分数", image_path=image_path)
-    insert_image = InlineImage(doc, image_path, width=Mm(140))
+    df = pd.read_excel(DEMO_DIR.joinpath("data.xlsx"))
+    image_path = DEMO_DIR.joinpath("image.png")
+
+    # 提取数据
+    y_cols = ["综合分数"]
+    x_data = df["姓名"].astype(str).tolist()
+    y_data = [df[col].tolist() for col in y_cols]
+    # 调用绘图函数
+    plot_line_chart(
+        x_data=x_data,
+        y_data=y_data,
+        labels=y_cols,
+        title="综合分数",
+        x_label="姓名",
+        y_label=y_cols[0],
+        output_path=image_path
+    )
+    insert_image = InlineImage(doc, image_path.__str__(), width=Mm(140))
     context["insert_image"] = insert_image
 
     # 渲染
@@ -42,7 +58,7 @@ def main():
         doc.tables[i] = merge_table_column(table, col_idx=0)  # 合并第 0 列（时间窗口列）
 
     # 保存
-    doc.save("data/demo/generated_doc.docx")
+    doc.save(DEMO_DIR.joinpath("generated_doc.docx"))
 
 
 if __name__ == '__main__':

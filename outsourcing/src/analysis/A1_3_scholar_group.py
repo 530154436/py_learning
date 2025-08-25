@@ -52,11 +52,11 @@ class ScholarAcademicAnnualChange(AbstractBase):
                 # 被引次数（累计）
                 year_total_cits = df_scholar_type[f"{year}年度总被引次数（截止{TIME_WINDOW_1_END}）"].sum()
                 result[f"{year}年度总被引次数（截止{TIME_WINDOW_1_END}）"] = year_total_cits
-                result[f"{year}年度篇均被引频次（截止{TIME_WINDOW_1_END}）"] = round(year_total_cits / year_total_pub, 2)
+                # result[f"{year}年度篇均被引频次（截止{TIME_WINDOW_1_END}）"] = round(year_total_cits / year_total_pub, 2)
 
                 year_cited_accum = df_scholar_type[f"{year}年度引用累积年数"].sum()
-                result[f"{year}年度引用累积年数"] = year_cited_accum
-                result[f"群体{year}年均引用率"] = round(year_total_cits / year_cited_accum, 2)
+                result[f"{year}年度引用累积年数（截止{TIME_WINDOW_1_END}）"] = year_cited_accum
+                result[f"群体{year}年均引用率（截止{TIME_WINDOW_1_END}）"] = round(year_total_cits / year_cited_accum, 2)
 
                 # 被引次数（当年）
                 # （某年）年度当年篇均被引频次=（某年）当年被引次数/（某年）年度发文总量
@@ -84,8 +84,6 @@ class ScholarAcademicAnnualChange(AbstractBase):
         df_res = pd.DataFrame(data)
         print(df_res)
         self.save_to_excel(df_res, save_file=self.__tbl_name__ + ".xlsx")
-
-
 
 
 if __name__ == "__main__":

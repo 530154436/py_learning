@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 
 BASE_DIR = Path(__file__).parent.parent
+DEMO_DIR = BASE_DIR.joinpath("data/demo")
 DATASET_DIR = BASE_DIR.joinpath("data/dataset")
 OUTPUT_DIR = BASE_DIR.joinpath("data/output")
 

@@ -17,7 +17,7 @@ from matplotlib.container import BarContainer
 from pandas import DataFrame
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
-from typing import Optional, List, Iterable
+from typing import Optional, List, Iterable, Union
 
 # 设置中文字体（防止中文乱码）
 plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
@@ -32,18 +32,24 @@ def plot_line_chart(
     x_label: Optional[str] = None,
     y_label: Optional[str] = None,
     output_path: str = "line_chart.png",
-    fig_size: tuple=(8, 5)
+    fig_size: tuple=(8, 5),
+    y_min: Optional[Union[float, int]] = None,
+    y_max: Optional[Union[float, int]] = None,
+    auto_y_limit: bool = True,
 ):
     """
     绘制折线图并保存为图片
-    :param x_data: X轴数据（字符串列表）
-    :param y_data: Y轴数据（二维浮点数列表）
-    :param labels: 图例标签（可选）
+    :param x_data: X轴数据（字符串列表） [m,]
+    :param y_data: Y轴数据（二维浮点数列表） [n, m]
+    :param labels: 图例标签（可选） [n, ]
     :param title: 图表标题（可选）
     :param x_label: X轴标签（可选）
     :param y_label: Y轴标签（可选）
     :param output_path: 输出图片路径
     :param fig_size: 图片大小
+    :param y_min: Y轴最小值
+    :param y_max: Y轴最大值
+    :param auto_y_limit: 自动计算 Y轴最大最小值
     """
     # 创建图表
     fig, ax = plt.subplots(figsize=fig_size)
@@ -52,6 +58,14 @@ def plot_line_chart(
     for i, y in enumerate(y_data):
         label = None if labels is None else labels[i]
         ax.plot(x_data, y, label=label, marker='o', linewidth=2)
+
+    # 计算全局最大值，用于统一X轴、Y轴范围
+    if auto_y_limit:
+        y_min = min(min(data) for data in y_data)
+        y_max = max(max(data) for data in y_data)
+        y_min = min(y_min, 0) if y_min > 0 else y_min + y_min * 0.4
+        y_max = max(y_max, 0) if y_max < 0 else y_max + y_max * 0.4
+    ax.set_ylim(y_min, y_max)
 
     # 设置图表属性
     if title:
@@ -63,47 +77,12 @@ def plot_line_chart(
     # 自动调整X轴刻度
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))  # 保持X轴为整数
     ax.grid(True, linestyle='--', alpha=0.7)
-    ax.legend()
-    plt.tight_layout()  # 自动调整边距
+    ax.legend(labels=labels, loc='upper center', ncol=len(labels), bbox_to_anchor=(0.5, 1.0), fontsize=14)
+    plt.tight_layout(rect=(0, 0, 1, 0.95))  # 预留顶部空间以适应图例
 
     # 保存图片
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
-
-
-def plot_line_char_by_df(
-    df: DataFrame,
-    x_col: str,
-    y_cols: List[str],
-    title: str = None,
-    image_path: str = "line_chart.png"
-):
-    """
-    从 DataFrame 生成折线图并保存
-    :param df: 输入数据（DataFrame）
-    :param x_col: X轴列名
-    :param y_cols: Y轴列名列表
-    :param title: 标题
-    :param image_path: 输出图片路径
-    """
-    # 检查列是否存在
-    if x_col not in df.columns or any(col not in df.columns for col in y_cols):
-        raise ValueError("指定的列不存在于 DataFrame 中")
-
-    # 提取数据
-    x_data = df[x_col].astype(str).tolist()
-    y_data = [df[col].tolist() for col in y_cols]
-
-    # 调用绘图函数
-    plot_line_chart(
-        x_data=x_data,
-        y_data=y_data,
-        labels=y_cols,
-        title=title,
-        x_label=x_col,
-        y_label=y_cols[0],
-        output_path=image_path
-    )
 
 
 #--------------------------------------------------------------------------
@@ -125,7 +104,7 @@ def  _plot_bar(
     绘制分组条形图并保存为图片
     :param ax: 坐标轴
     :param x_data: X轴数据 [m,]
-    :param y_data: Y轴数据 [m, n]
+    :param y_data: Y轴数据 [n, m]
     :param labels: 分组标签（图例） [n,]
     """
     num_groups = len(y_data)
@@ -226,13 +205,19 @@ def plot_grouped_bar(
 
 
 if __name__ == '__main__':
+    plot_line_chart(["A", "B", "C"],
+                    y_data=[[10, 20, 30],
+                            [5, 25, 35]],
+                    labels=["获奖前5年", "获奖后5年"],
+                    output_path="line_chart.png")
     plot_grouped_bar(["A", "B", "C"],
                      [[10, 20, 30]],
                      labels=["获奖前5年"],
                      titles=["示例分组条形图"],
                      output_path="bar_1.png")
     plot_grouped_bar(["A", "B", "C"],
-                     [[10, 20, 30], [15, 25, 35]],
+                     [[10, 20, 30],
+                              [15, 25, 35]],
                      labels=["获奖前5年", "获奖后5年"],
                      titles=["示例分组条形图"],
                      output_path="bar_2.png")
