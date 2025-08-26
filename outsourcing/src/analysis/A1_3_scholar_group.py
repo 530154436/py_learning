@@ -49,14 +49,10 @@ class ScholarAcademicAnnualChange(AbstractBase):
                 year_total_pub = df_scholar_type[f"{year}年度发文总量"].sum()
                 result[f"{year}年度发文总量"] = year_total_pub
 
-                # 被引次数（累计）
+                # 总被引次数（累计）
                 year_total_cits = df_scholar_type[f"{year}年度总被引次数（截止{TIME_WINDOW_1_END}）"].sum()
                 result[f"{year}年度总被引次数（截止{TIME_WINDOW_1_END}）"] = year_total_cits
-                # result[f"{year}年度篇均被引频次（截止{TIME_WINDOW_1_END}）"] = round(year_total_cits / year_total_pub, 2)
-
-                year_cited_accum = df_scholar_type[f"{year}年度引用累积年数"].sum()
-                result[f"{year}年度引用累积年数（截止{TIME_WINDOW_1_END}）"] = year_cited_accum
-                result[f"群体{year}年均引用率（截止{TIME_WINDOW_1_END}）"] = round(year_total_cits / year_cited_accum, 2)
+                result[f"{year}年度篇均被引频次（截止{TIME_WINDOW_1_END}）"] = round(year_total_cits / year_total_pub, 2)
 
                 # 被引次数（当年）
                 # （某年）年度当年篇均被引频次=（某年）当年被引次数/（某年）年度发文总量
@@ -64,11 +60,16 @@ class ScholarAcademicAnnualChange(AbstractBase):
                 result[f"{year}年度当年被引次数"] = year_total_cits_now
                 result[f"{year}年度当年篇均被引频次"] = round(year_total_cits_now / year_total_pub, 2)
 
+                # 年度引用率
+                year_expose = df_scholar_type[f"{year}年度篇均暴露年数（截止{TIME_WINDOW_1_END}）"]
+                result[f"{year}年度篇均暴露年数（截止{TIME_WINDOW_1_END}）"] = year_expose
+                result[f"群体{year}年均引用率（截止{TIME_WINDOW_1_END}）"] = round(year_total_cits / year_expose, 2)
+
                 # 滑动窗口
-                pre5_year_total_pub = df_scholar_type[f"近5年发表论文{year}年发文总量"].sum()
-                pre5_year_total_cits = df_scholar_type[f"近5年发表论文{year}年累计总被引次数"].sum()
-                result[f"近5年发表论文{year}年发文总量"] = pre5_year_total_pub
-                result[f"近5年发表论文{year}年累计总被引次数"] = pre5_year_total_cits
+                pre5_year_total_pub = df_scholar_type[f"{year}年近5年累积发文总量"].sum()
+                pre5_year_total_cits = df_scholar_type[f"{year}年近5年累积总被引次数"].sum()
+                result[f"{year}年近5年累积发文总量"] = pre5_year_total_pub
+                result[f"{year}年近5年累积总被引次数"] = pre5_year_total_cits
                 result[f"群体{year}ACPP"] = round(pre5_year_total_cits / pre5_year_total_pub, 2)
 
                 # 高影响力论文占比

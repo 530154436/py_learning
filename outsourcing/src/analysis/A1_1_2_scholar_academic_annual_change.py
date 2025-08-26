@@ -60,11 +60,11 @@ class ScholarAcademicAnnualChange(AbstractBase):
             year_avg_cits = round(sum_citations_per_paper.mean(), 2)
             result[f"{year}年度篇均被引频次（截止{TIME_WINDOW_1_END}）"] = year_avg_cits
 
-            # xxxx年度引用累积年数（截止2024）: \sum{每篇论文的累积年数 = 2024 - 发表年份 + 1}
+            # xxxx年度篇均暴露年数（截止2024）= 2024 - 发表年份 + 1
             # xxxx年度年均引用率（截止2024）=年度总被引次数（截止2024）/ 年度引用累积年数（截止2024）
-            year_accum = (TIME_WINDOW_1_END - year + 1) * sum_citations_per_paper.count()  # 空则为na
-            result[f"{year}年度引用累积年数"] = year_accum
-            result[f"{year}年度年均引用率（截止{TIME_WINDOW_1_END}）"] = round(year_total_cits/year_accum, ndigits=2)
+            year_expose = (TIME_WINDOW_1_END - year + 1)
+            result[f"{year}年度篇均暴露年数（截止{TIME_WINDOW_1_END}）"] = year_expose
+            result[f"{year}年度年均引用率（截止{TIME_WINDOW_1_END}）"] = round(year_total_cits/year_expose, ndigits=2)
 
             # xxxx年度当年被引次数：目标年份内发表的论文在同年获得的引用总次数
             # 例如：2015年度当年被引次数：学者在2015年发表的论文在2015年获得的总被引频次
@@ -89,12 +89,12 @@ class ScholarAcademicAnnualChange(AbstractBase):
 
             # 近5年发表论文2015年发文总量
             pre5_year_total_pub = df_pre5_year["UT (Unique WOS ID)"].nunique(dropna=True)
-            result[f"近5年发表论文{year}年发文总量"] = pre5_year_total_pub
+            result[f"{year}年近5年累积发文总量"] = pre5_year_total_pub
 
             # 近5年发表论文2015年累计总被引次数
             sum_citations_per_paper = self.calc_citations_per_paper(df_pre5_year, start_year=year-4, end_year=year)
             pre5_year_total_cits = int(sum_citations_per_paper.sum())
-            result[f"近5年发表论文{year}年累计总被引次数"] = pre5_year_total_cits
+            result[f"{year}年近5年累积总被引次数"] = pre5_year_total_cits
 
             # xxxx年ACPP
             pre5_year_acpp = pre5_year_total_cits / pre5_year_total_pub if pre5_year_total_pub > 0 else 0
