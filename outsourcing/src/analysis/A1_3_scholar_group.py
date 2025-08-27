@@ -38,6 +38,7 @@ class ScholarAcademicAnnualChange(AbstractBase):
         years = range(TIME_WINDOW_0_START, TIME_WINDOW_1_END + 1)
         for scholar_type in [1, 0]:
             df_scholar_type = df[df["学者类型（获奖人=1，0=对照学者）"] == scholar_type]
+            num_scholar = df_scholar_type["姓名"].nunique()
             result = OrderedDict({
                 "学者类型（获奖人=1，0=对照学者）": scholar_type,
                 "学者人数": df_scholar_type["姓名"].nunique(),
@@ -48,6 +49,7 @@ class ScholarAcademicAnnualChange(AbstractBase):
             for year in years:
                 year_total_pub = df_scholar_type[f"{year}年度发文总量"].sum()
                 result[f"{year}年度发文总量"] = year_total_pub
+                result[f"{year}平均发文量/篇"] = round(year_total_pub / num_scholar, 2)
 
                 # 总被引次数（累计）
                 year_total_cits = df_scholar_type[f"{year}年度总被引次数（截止{TIME_WINDOW_1_END}）"].sum()
@@ -61,16 +63,16 @@ class ScholarAcademicAnnualChange(AbstractBase):
                 result[f"{year}年度当年篇均被引频次"] = round(year_total_cits_now / year_total_pub, 2)
 
                 # 年度引用率
-                year_expose = df_scholar_type[f"{year}年度篇均暴露年数（截止{TIME_WINDOW_1_END}）"]
+                year_expose = (TIME_WINDOW_1_END - year + 1) * num_scholar
                 result[f"{year}年度篇均暴露年数（截止{TIME_WINDOW_1_END}）"] = year_expose
-                result[f"群体{year}年均引用率（截止{TIME_WINDOW_1_END}）"] = round(year_total_cits / year_expose, 2)
+                result[f"{year}年均引用率（截止{TIME_WINDOW_1_END}）"] = round(year_total_cits / year_expose, 2)
 
                 # 滑动窗口
                 pre5_year_total_pub = df_scholar_type[f"{year}年近5年累积发文总量"].sum()
                 pre5_year_total_cits = df_scholar_type[f"{year}年近5年累积总被引次数"].sum()
                 result[f"{year}年近5年累积发文总量"] = pre5_year_total_pub
                 result[f"{year}年近5年累积总被引次数"] = pre5_year_total_cits
-                result[f"群体{year}ACPP"] = round(pre5_year_total_cits / pre5_year_total_pub, 2)
+                result[f"{year}年近5年累积篇均被引（ACPP）"] = round(pre5_year_total_cits / pre5_year_total_pub, 2)
 
                 # 高影响力论文占比
                 year_total_top_pub = df_scholar_type[f"{year}年顶刊/会议论文数"].sum()
