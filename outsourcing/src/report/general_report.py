@@ -9,7 +9,7 @@ from scipy import stats
 from analysis import RESEARCH_TYPE_MAPPING
 from config import DATASET_DIR, OUTPUT_DIR, CURRENT_YEAR, TIME_WINDOW_0_START, TIME_WINDOW_0_END, TIME_WINDOW_1_START, \
     TIME_WINDOW_1_END
-from utils.plot_util import plot_line_chart
+from utils.plot_util import plot_line_chart, plot_grouped_bar
 
 
 class GeneralReport:
@@ -35,18 +35,7 @@ class GeneralReport:
     def section_3_2_1(self):
         input_file = OUTPUT_DIR.joinpath("A1.3-群体学术能力年度趋势.xlsx")
         df = pd.read_excel(input_file)
-
-        # 1、计算指标
-        for year in range(TIME_WINDOW_0_START, TIME_WINDOW_1_END + 1):
-            df[f"{year}平均发文量/篇"] = df[f"{year}平均发文量/篇"]
-            df[f"{year}篇均被引频次（截止{TIME_WINDOW_1_END}）"] = df[f"{year}年度篇均被引频次（截止{TIME_WINDOW_1_END}）"]
-            df[f"{year}当年篇均被引频次"] = df[f"{year}年度当年篇均被引频次"]
-            df[f"{year}年均引用率（截止{TIME_WINDOW_1_END}）"] = df[f"{year}年均引用率（截止{TIME_WINDOW_1_END}）"]
-            df[f"{year}近5年累积篇均被引（ACPP）"] = df[f"{year}年近5年累积篇均被引（ACPP）"]
-            df[f"{year}高影响力论文占比（%）"] = df[f"{year}年度高影响力论文占比"].apply(lambda x: int(x * 100))
-            df[f"{year}平均专利族数量"] = np.round(df[f"{year}年度专利族数量"] / df["学者人数"], 2)
-
-        # 2、绘制折线图
+        # 绘制折线图
         metrics = [
             # 图3-1. 获奖人与对照学者发文量年度变化
             ("{year}平均发文量/篇", self.save_dir.joinpath("image_3_1.png")),
@@ -57,7 +46,9 @@ class GeneralReport:
             # 图3-2-3.
             ("{year}年均引用率" + f"（截止{TIME_WINDOW_1_END}）", self.save_dir.joinpath("image_3_2_3.png")),
             # 图3-2-4.
-            ("{year}近5年累积篇均被引（ACPP）", self.save_dir.joinpath("image_3_2_4.png")),
+            ("{year}篇均被引频次（5年时间窗口）", self.save_dir.joinpath("image_3_2_4.png")),
+            # 图3-2-5.
+            ("{year}年均引用率（5年时间窗口）", self.save_dir.joinpath("image_3_2_5.png")),
             # 图3-3. 获奖人与对照学者高影响力论文占比年度变化
             ("{year}高影响力论文占比（%）", self.save_dir.joinpath("image_3_3.png")),
             # 图3-4. 获奖人与对照学者专利族数量年度变化
@@ -89,7 +80,36 @@ class GeneralReport:
             self.context.update({save_file.stem: InlineImage(self.doc, str(save_file), width=Mm(140))})
 
     def section_3_2_2(self):
-        pass
+        input_file = OUTPUT_DIR.joinpath("A3-差值分析数据集.xlsx")
+        df = pd.read_excel(input_file)
+
+        metrics = [
+            # 图3-5. 获奖人获奖前后5年学术能力差异性分析
+            (["综合分数", "学术生产力", "学术影响力"], self.save_dir.joinpath("image_3_5.png")),
+            # 图3-7. 获奖人与对照学者获奖前后5年学术能力指标差值的差异性分析
+            (["差值-综合分数", "差值-学术生产力", "差值-学术影响力"], self.save_dir.joinpath("image_3_7.png")),
+        ]
+        for x_data, save_file in metrics:
+            labels = []
+            y_data = []
+            for tw, tw_label in zip([0, 1], ["获奖前5年", "获奖后5年"]):
+                y_i = []
+                for x in x_data:
+                    y_i.append(round(df[f"{x}{tw}"].mean(), ndigits=2))
+                y_data.append(y_i)
+                labels.append(tw_label)
+            plot_grouped_bar(
+                x_data,
+                y_data,
+                labels=labels,
+                x_label=None,
+                y_label=None,
+                output_path=save_file
+            )
+            self.context.update({save_file.stem: InlineImage(self.doc, str(save_file), width=Mm(140))})
+
+        # 表3-2. 获奖人学术成长变化模式学科领域分布情况
+        # 图3-8. 不同研究类型获奖人与对照学者获奖前后5年学术能力指标差值的差异性分析
 
     def appendix_1(self):
         input_file = DATASET_DIR.joinpath("S2.2-学者关联信息表-对照分组.xlsx")
@@ -291,7 +311,7 @@ class GeneralReport:
 
     def run(self):
         self.section_3_2_1()
-        # self.section_3_2_2()
+        self.section_3_2_2()
 
         self.appendix_1()  # 第1列合并有问题
         self.appendix_2()

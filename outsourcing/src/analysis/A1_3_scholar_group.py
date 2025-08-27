@@ -47,41 +47,46 @@ class ScholarAcademicAnnualChange(AbstractBase):
                 "10年共同年份范围": self.clac_common_paper_year(df_scholar_type["10年论文发表年份集合"]),
             })
             for year in years:
-                year_total_pub = df_scholar_type[f"{year}年度发文总量"].sum()
-                result[f"{year}年度发文总量"] = year_total_pub
+                year_total_pub = df_scholar_type[f"{year}发文总量"].sum()
+                result[f"{year}发文总量"] = year_total_pub
                 result[f"{year}平均发文量/篇"] = round(year_total_pub / num_scholar, 2)
 
                 # 总被引次数（累计）
-                year_total_cits = df_scholar_type[f"{year}年度总被引次数（截止{TIME_WINDOW_1_END}）"].sum()
-                result[f"{year}年度总被引次数（截止{TIME_WINDOW_1_END}）"] = year_total_cits
-                result[f"{year}年度篇均被引频次（截止{TIME_WINDOW_1_END}）"] = round(year_total_cits / year_total_pub, 2)
+                year_total_cits = df_scholar_type[f"{year}总被引次数（截止{TIME_WINDOW_1_END}）"].sum()
+                result[f"{year}总被引次数（截止{TIME_WINDOW_1_END}）"] = year_total_cits
+                result[f"{year}篇均被引频次（截止{TIME_WINDOW_1_END}）"] = round(year_total_cits / year_total_pub, 2)
 
                 # 被引次数（当年）
                 # （某年）年度当年篇均被引频次=（某年）当年被引次数/（某年）年度发文总量
-                year_total_cits_now = df_scholar_type[f"{year}年度当年被引次数"].sum()
-                result[f"{year}年度当年被引次数"] = year_total_cits_now
-                result[f"{year}年度当年篇均被引频次"] = round(year_total_cits_now / year_total_pub, 2)
+                year_total_cits_now = df_scholar_type[f"{year}当年总被引次数"].sum()
+                result[f"{year}当年总被引次数"] = year_total_cits_now
+                result[f"{year}当年篇均被引频次"] = round(year_total_cits_now / year_total_pub, 2)
 
                 # 年度引用率
-                year_expose = (TIME_WINDOW_1_END - year + 1) * num_scholar
-                result[f"{year}年度篇均暴露年数（截止{TIME_WINDOW_1_END}）"] = year_expose
+                year_expose = (TIME_WINDOW_1_END - year + 1) * year_total_pub
+                result[f"{year}总暴露年数（截止{TIME_WINDOW_1_END}）"] = year_expose
                 result[f"{year}年均引用率（截止{TIME_WINDOW_1_END}）"] = round(year_total_cits / year_expose, 2)
 
                 # 滑动窗口
-                pre5_year_total_pub = df_scholar_type[f"{year}年近5年累积发文总量"].sum()
-                pre5_year_total_cits = df_scholar_type[f"{year}年近5年累积总被引次数"].sum()
-                result[f"{year}年近5年累积发文总量"] = pre5_year_total_pub
-                result[f"{year}年近5年累积总被引次数"] = pre5_year_total_cits
-                result[f"{year}年近5年累积篇均被引（ACPP）"] = round(pre5_year_total_cits / pre5_year_total_pub, 2)
+                pre5_year_total_pub = df_scholar_type[f"{year}发文总量（5年时间窗口）"].sum()
+                pre5_year_total_expose = df_scholar_type[f"{year}总暴露年数（5年时间窗口）"].sum()
+                pre5_year_total_cits = df_scholar_type[f"{year}总被引次数（5年时间窗口）"].sum()
+                result[f"{year}发文总量（5年时间窗口）"] = pre5_year_total_pub
+                result[f"{year}总暴露年数（5年时间窗口）"] = pre5_year_total_expose
+                result[f"{year}总被引次数（5年时间窗口）"] = pre5_year_total_cits
+                result[f"{year}篇均被引频次（5年时间窗口）"] = round(pre5_year_total_cits / pre5_year_total_pub, 2)
+                result[f"{year}年均引用率（5年时间窗口）"] = round(pre5_year_total_cits / pre5_year_total_expose, 2)
 
                 # 高影响力论文占比
-                year_total_top_pub = df_scholar_type[f"{year}年顶刊/会议论文数"].sum()
-                year_total_pub_no_pp = df_scholar_type[f"{year}年度发文总量（不含预印本）"].sum()
-                result[f"{year}年顶刊/会议论文数"] = year_total_top_pub
-                result[f"{year}年度发文总量（不含预印本）"] = year_total_pub_no_pp
-                result[f"{year}年度高影响力论文占比"] = round(year_total_top_pub / year_total_pub_no_pp, ndigits=2) if year_total_pub_no_pp > 0 else 0
+                year_total_top_pub = df_scholar_type[f"{year}顶刊/会议论文数"].sum()
+                year_total_pub_no_pp = df_scholar_type[f"{year}发文总量（不含预印本）"].sum()
+                result[f"{year}顶刊/会议论文数"] = year_total_top_pub
+                result[f"{year}发文总量（不含预印本）"] = year_total_pub_no_pp
+                result[f"{year}高影响力论文占比（%）"] = int(round(year_total_top_pub / year_total_pub_no_pp, ndigits=2) * 100) if year_total_pub_no_pp > 0 else 0
 
-                result[f"{year}年度专利族数量"] = df_scholar_type[f"{year}年度专利族数量"].sum()
+                num_patent_family = df_scholar_type[f"{year}专利族数量"].sum()
+                result[f"{year}专利族数量"] =num_patent_family
+                result[f"{year}平均专利族数量"] = round(num_patent_family / num_scholar, 2)
 
             data.append(result)
         df_res = pd.DataFrame(data)
