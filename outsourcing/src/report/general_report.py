@@ -79,7 +79,7 @@ class GeneralReport:
             )
             self.context.update({save_file.stem: InlineImage(self.doc, str(save_file), width=Mm(140))})
 
-    def section_3_2_2(self):
+    def section_3_3_image(self):
         input_file = OUTPUT_DIR.joinpath("A3-差值分析数据集.xlsx")
         df = pd.read_excel(input_file)
 
@@ -108,8 +108,58 @@ class GeneralReport:
             )
             self.context.update({save_file.stem: InlineImage(self.doc, str(save_file), width=Mm(140))})
 
-        # 表3-2. 获奖人学术成长变化模式学科领域分布情况
         # 图3-8. 不同研究类型获奖人与对照学者获奖前后5年学术能力指标差值的差异性分析
+        # 研究类型（1=基础科学，0=工程技术，2=前沿交叉）
+        x_data = ["综合分数", "学术生产力", "学术影响力"]
+        titles = ["基础科学", "工程技术"]
+        labels = ["获奖前5年", "获奖后5年"]
+        y_data_1, y_data_2 = [], []
+
+        df_1 = df[df["研究类型（1=基础科学，0=工程技术，2=前沿交叉）"].isin([1, 2])]
+        for tw, tw_label in zip([0, 1], labels):
+            y_i = []
+            for x in x_data:
+                y_i.append(round(df_1[f"{x}{tw}"].mean(), ndigits=2))
+            y_data_1.append(y_i)
+
+        df_2 = df[df["研究类型（1=基础科学，0=工程技术，2=前沿交叉）"].isin([0])]
+        for tw, tw_label in zip([0, 1], labels):
+            y_i = []
+            for x in x_data:
+                y_i.append(round(df_2[f"{x}{tw}"].mean(), ndigits=2))
+            y_data_2.append(y_i)
+
+        save_file = self.save_dir.joinpath("image_3_8.png")
+        plot_grouped_bar(
+            x_data,
+            y_data_1, y_data_2,
+            labels=labels,
+            titles=titles,
+            x_label=None,
+            y_label=None,
+            output_path=save_file
+        )
+        self.context.update({save_file.stem: InlineImage(self.doc, str(save_file), width=Mm(140))})
+
+    def section_3_3_table(self):
+        input_file = OUTPUT_DIR.joinpath("A3-差值分析数据集.xlsx")
+        df = pd.read_excel(input_file)
+
+        # 表3-2. 获奖人学术成长变化模式学科领域分布情况
+        section_3_table = []
+        domains = df["研究领域"].drop_duplicates(keep="first").tolist()
+        for domain in domains:
+            df_sub = df[df["研究领域"] == domain]
+            section_3_table.append({
+                "a1": domain,
+                "a2": (df_sub["成长模式"] == "始终领先型").sum(),
+                "a3": (df_sub["成长模式"] == "始终落后型").sum(),
+                "a4": (df_sub["成长模式"] == "快速成长型").sum(),
+                "a5": (df_sub["成长模式"] == "成长放缓型").sum(),
+            })
+        self.context.update({
+            'section_3_table': section_3_table
+        })
 
     def appendix_1(self):
         input_file = DATASET_DIR.joinpath("S2.2-学者关联信息表-对照分组.xlsx")
@@ -311,7 +361,8 @@ class GeneralReport:
 
     def run(self):
         self.section_3_2_1()
-        self.section_3_2_2()
+        self.section_3_3_image()
+        self.section_3_3_table()
 
         self.appendix_1()  # 第1列合并有问题
         self.appendix_2()
