@@ -142,7 +142,7 @@ def  _plot_bar(
                         xytext=(0, offset),  # 3 points vertical offset
                         textcoords="offset points",
                         ha='center', va=va,
-                        fontsize=12)
+                        fontsize=10)
     ax.set_xticks(x_pos + ((len(y_data) - 1) / 2) * bar_width)
     ax.set_xticklabels(x_data, fontsize=12)
 

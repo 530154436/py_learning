@@ -49,7 +49,7 @@ class ScholarAcademicAnnualChange(AbstractBase):
 
             # xxxx年度高影响力论文占比 = (xxxx年顶刊/会议论文数) / (xxxx年度发文总量不含预印本）)
             year_total_top_pub_ratio = round(year_total_top_pub / year_total_pub_no_pp, ndigits=2) if year_total_pub_no_pp > 0 else 0
-            result[f"{year}高影响力论文占比（%）"] = int(year_total_top_pub_ratio * 100)
+            result[f"{year}顶级期刊/会议发文占比"] = int(year_total_top_pub_ratio * 100)
 
             # xxx年度总被引次数（截止2024）：统计目标年份发表的论文，从发表到2024年累积的引用次数。
             sum_citations_per_paper = self.calc_citations_per_paper(df_year, start_year=year, end_year=TIME_WINDOW_1_END)

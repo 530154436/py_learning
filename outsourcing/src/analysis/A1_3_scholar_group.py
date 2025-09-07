@@ -82,7 +82,7 @@ class ScholarAcademicAnnualChange(AbstractBase):
                 year_total_pub_no_pp = df_scholar_type[f"{year}发文总量（不含预印本）"].sum()
                 result[f"{year}顶刊/会议论文数"] = year_total_top_pub
                 result[f"{year}发文总量（不含预印本）"] = year_total_pub_no_pp
-                result[f"{year}高影响力论文占比（%）"] = int(round(year_total_top_pub / year_total_pub_no_pp, ndigits=2) * 100) if year_total_pub_no_pp > 0 else 0
+                result[f"{year}顶级期刊/会议发文占比"] = int(round(year_total_top_pub / year_total_pub_no_pp, ndigits=2) * 100) if year_total_pub_no_pp > 0 else 0
 
                 num_patent_family = df_scholar_type[f"{year}专利族数量"].sum()
                 result[f"{year}专利族数量"] =num_patent_family

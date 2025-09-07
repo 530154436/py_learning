@@ -50,7 +50,7 @@ class GeneralReport:
             # 图3-2-5.
             ("{year}年均引用率（5年时间窗口）", self.save_dir.joinpath("image_3_2_5.png")),
             # 图3-3. 获奖人与对照学者高影响力论文占比年度变化
-            ("{year}高影响力论文占比（%）", self.save_dir.joinpath("image_3_3.png")),
+            ("{year}顶级期刊/会议发文占比", self.save_dir.joinpath("image_3_3.png")),
             # 图3-4. 获奖人与对照学者专利族数量年度变化
             ("{year}平均专利族数量", self.save_dir.joinpath("image_3_4.png")),
         ]
@@ -85,16 +85,18 @@ class GeneralReport:
 
         metrics = [
             # 图3-5. 获奖人获奖前后5年学术能力差异性分析
-            (["综合分数", "学术生产力", "学术影响力"], self.save_dir.joinpath("image_3_5.png")),
+            (["综合分数", "学术生产力", "学术影响力"],
+             ["综合分数", "学术生产力", "学术影响力"], self.save_dir.joinpath("image_3_5.png")),
             # 图3-7. 获奖人与对照学者获奖前后5年学术能力指标差值的差异性分析
-            (["差值-综合分数", "差值-学术生产力", "差值-学术影响力"], self.save_dir.joinpath("image_3_7.png")),
+            (["差值-综合分数", "差值-学术生产力", "差值-学术影响力"],
+             ["综合分数", "学术生产力", "学术影响力"], self.save_dir.joinpath("image_3_7.png")),
         ]
-        for x_data, save_file in metrics:
+        for columns, x_data, save_file in metrics:
             labels = []
             y_data = []
             for tw, tw_label in zip([0, 1], ["获奖前5年", "获奖后5年"]):
                 y_i = []
-                for x in x_data:
+                for x in columns:
                     y_i.append(round(df[f"{x}{tw}"].mean(), ndigits=2))
                 y_data.append(y_i)
                 labels.append(tw_label)
@@ -110,22 +112,24 @@ class GeneralReport:
 
         # 图3-8. 不同研究类型获奖人与对照学者获奖前后5年学术能力指标差值的差异性分析
         # 研究类型（1=基础科学，0=工程技术，2=前沿交叉）
+        # => 统计分析对象是获奖人与对照组各指标差值
+        columns = ["差值-综合分数", "差值-学术生产力", "差值-学术影响力"]
         x_data = ["综合分数", "学术生产力", "学术影响力"]
         titles = ["基础科学", "工程技术"]
         labels = ["获奖前5年", "获奖后5年"]
         y_data_1, y_data_2 = [], []
 
-        df_1 = df[df["研究类型（1=基础科学，0=工程技术，2=前沿交叉）"].isin([1, 2])]
+        df_1 = df[df["研究类型（1=基础科学，0=工程技术，2=前沿交叉）"].isin([1])]  # TODO: 1 union 2？
         for tw, tw_label in zip([0, 1], labels):
             y_i = []
-            for x in x_data:
+            for x in columns:
                 y_i.append(round(df_1[f"{x}{tw}"].mean(), ndigits=2))
             y_data_1.append(y_i)
 
         df_2 = df[df["研究类型（1=基础科学，0=工程技术，2=前沿交叉）"].isin([0])]
         for tw, tw_label in zip([0, 1], labels):
             y_i = []
-            for x in x_data:
+            for x in columns:
                 y_i.append(round(df_2[f"{x}{tw}"].mean(), ndigits=2))
             y_data_2.append(y_i)
 
@@ -148,17 +152,33 @@ class GeneralReport:
         # 表3-2. 获奖人学术成长变化模式学科领域分布情况
         section_3_table = []
         domains = df["研究领域"].drop_duplicates(keep="first").tolist()
+        sum_a2, sum_a3, sum_a4, sum_a5, sum_all = 0, 0, 0, 0, 0
         for domain in domains:
             df_sub = df[df["研究领域"] == domain]
+            a2 = (df_sub["成长模式"] == "始终领先型").sum()
+            a3 = (df_sub["成长模式"] == "始终落后型").sum()
+            a4 = (df_sub["成长模式"] == "快速成长型").sum()
+            a5 = (df_sub["成长模式"] == "成长放缓型").sum()
             section_3_table.append({
                 "a1": domain,
-                "a2": (df_sub["成长模式"] == "始终领先型").sum(),
-                "a3": (df_sub["成长模式"] == "始终落后型").sum(),
-                "a4": (df_sub["成长模式"] == "快速成长型").sum(),
-                "a5": (df_sub["成长模式"] == "成长放缓型").sum(),
+                "a2": a2,
+                "a3": a3,
+                "a4": a4,
+                "a5": a5,
             })
+            sum_a2 += a2
+            sum_a3 += a3
+            sum_a4 += a4
+            sum_a5 += a5
+
+        sum_all = sum_a2 + sum_a3 + sum_a4 + sum_a5
         self.context.update({
-            'section_3_table': section_3_table
+            'section_3_table': section_3_table,
+            's3t': {"a2": sum_a2, "a3": sum_a3, "a4": sum_a4, "a5": sum_a5},
+            's3tr': {"a2": f"{int(round(sum_a2/sum_all, ndigits=2)*100)}%",
+                     "a3": f"{int(round(sum_a3/sum_all, ndigits=2)*100)}%",
+                     "a4": f"{int(round(sum_a4/sum_all, ndigits=2)*100)}%",
+                     "a5": f"{int(round(sum_a5/sum_all, ndigits=2)*100)}%"},
         })
 
     def appendix_1(self):
@@ -311,9 +331,9 @@ class GeneralReport:
         df = df[df['学者类型（获奖人=1，0=对照学者）'] == 1].copy()
         # 定义要检验的指标
         changes = {
-            '综合分数1-\r综合分数0': ('差值-综合分数0', '差值-综合分数1'),
-            '学术生产力1-\r学术生产力0': ('差值-学术生产力0', '差值-学术生产力1'),
-            '学术影响力1-\r学术影响力0': ('差值-学术影响力0', '差值-学术影响力1')
+            '综合分数1-\r综合分数0': ('综合分数0', '综合分数1'),
+            '学术生产力1-\r学术生产力0': ('学术生产力0', '学术生产力1'),
+            '学术影响力1-\r学术影响力0': ('学术影响力0', '学术影响力1')
         }
         table_appendix_4 = []
         for label, (pre_diff_col, post_diff_col) in changes.items():
