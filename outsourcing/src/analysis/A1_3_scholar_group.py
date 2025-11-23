@@ -34,11 +34,21 @@ class ScholarAcademicAnnualChange(AbstractBase):
         # print(df)
         # assert df.shape[0] == 249
 
+        # 补充 研究类型（1=基础科学，0=工程技术，2=前沿交叉）
+        df_3 = pd.read_excel(DATASET_DIR.joinpath("S2.1-学者基本信息.xlsx"))
+        df_3 = df_3[['学者唯一ID', '姓名', '学者类型（获奖人=1，0=对照学者）', '研究类型（1=基础科学，0=工程技术，2=前沿交叉）']].copy()
+        df = pd.merge(df, df_3, on=['学者唯一ID', '姓名', '学者类型（获奖人=1，0=对照学者）'], how="inner")
+        print(df)
+
         data = []
         years = range(TIME_WINDOW_0_START, TIME_WINDOW_1_END + 1)
         for scholar_type in [1, 0]:
             df_scholar_type = df[df["学者类型（获奖人=1，0=对照学者）"] == scholar_type]
             num_scholar = df_scholar_type["姓名"].nunique()
+
+            df_research_0 = df_scholar_type[df_scholar_type["研究类型（1=基础科学，0=工程技术，2=前沿交叉）"] == 0]
+            num_scholar_research_0 = df_research_0["姓名"].nunique()
+
             result = OrderedDict({
                 "学者类型（获奖人=1，0=对照学者）": scholar_type,
                 "学者人数": df_scholar_type["姓名"].nunique(),
@@ -87,6 +97,11 @@ class ScholarAcademicAnnualChange(AbstractBase):
                 num_patent_family = df_scholar_type[f"{year}专利族数量"].sum()
                 result[f"{year}专利族数量"] =num_patent_family
                 result[f"{year}平均专利族数量"] = round(num_patent_family / num_scholar, 2)
+
+                # 工程技术获奖人与对照学者的专利族数量
+                num_patent_family_research_0 = df_research_0[f"{year}专利族数量"].sum()
+                result[f"{year}工程领域专利族数量"] = num_patent_family_research_0
+                result[f"{year}工程领域平均专利族数量"] = round(num_patent_family_research_0 / num_scholar_research_0, 2)
 
             data.append(result)
         df_res = pd.DataFrame(data)

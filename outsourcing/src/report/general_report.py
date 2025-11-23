@@ -53,6 +53,8 @@ class GeneralReport:
             ("{year}顶级期刊/会议发文占比", self.save_dir.joinpath("image_3_3.png")),
             # 图3-4. 获奖人与对照学者专利族数量年度变化
             ("{year}平均专利族数量", self.save_dir.joinpath("image_3_4.png")),
+            # 图3-5. 工程领域获奖人与对照学者专利族数量年度变化
+            ("{year}工程领域平均专利族数量", self.save_dir.joinpath("image_3_5.png")),
         ]
         x_data = list(map(lambda x: str(x), range(TIME_WINDOW_0_START, TIME_WINDOW_1_END + 1)))
         labels = ["获奖人", "对照学者"]
