@@ -36,6 +36,8 @@ def plot_line_chart(
     y_min: Optional[Union[float, int]] = None,
     y_max: Optional[Union[float, int]] = None,
     auto_y_limit: bool = True,
+    show_point_text: bool = False,
+    legend_loc:str ='upper center'
 ):
     """
     绘制折线图并保存为图片
@@ -50,6 +52,8 @@ def plot_line_chart(
     :param y_min: Y轴最小值
     :param y_max: Y轴最大值
     :param auto_y_limit: 自动计算 Y轴最大最小值
+    :param show_point_text: 点显示数值
+    :param legend_loc: 图例位置
     """
     # 创建图表
     fig, ax = plt.subplots(figsize=fig_size)
@@ -57,7 +61,30 @@ def plot_line_chart(
     # 绘制折线
     for i, y in enumerate(y_data):
         label = None if labels is None else labels[i]
-        ax.plot(x_data, y, label=label, marker='o', linewidth=2)
+        line, = ax.plot(x_data, y, label=label, marker='o', linewidth=2)
+
+        if show_point_text:
+            # line_color = line.get_color()
+            # 2. 遍历该线条的每一个点，添加数值标签
+            for x_index, y_val in enumerate(y):
+                ax.annotate(
+                    text=f"{y_val}",             # 显示的文本 (可改为 f"{y_val:.1f}" 控制小数位)
+                    xy=(x_index, y_val),         # 点的坐标 (x_index 对应 0, 1, 2...)
+                    xytext=(0, 10),              # 文本偏移量：(x=0, y=10个点)，即向上偏移
+                    textcoords='offset points',  # 坐标系：相对于点的像素偏移
+                    ha='center',                 # 水平居中
+                    va='bottom',                 # 垂直底部对齐
+                    fontsize=8,                  # 字体大小
+                    fontweight='bold',           # 字体加粗
+                )
+
+    # 调整 X 轴的显示范围以控制间距：如果数据点很少（比如只有2个），增加 padding 可以让点更集中在中间
+    n_points = len(x_data)
+    if n_points <= 4:
+        padding = 0.8
+        # 强制设置 xlim，利用 padding 挤压视觉空间
+        # x轴的索引本质是 0, 1, 2... 所以范围设置为 -padding 到 (n-1)+padding
+        ax.set_xlim(-padding, (n_points - 1) + padding)
 
     # 计算全局最大值，用于统一X轴、Y轴范围
     if auto_y_limit:
@@ -74,10 +101,18 @@ def plot_line_chart(
         ax.set_ylabel(y_label)
     if x_label:
         ax.set_xlabel(x_label)
+
+    # 手动设置X轴刻度位置和标签：显式指定刻度只在 0, 1... 位置，避免因为 xlim 变大而出现空白的刻度线
+    ax.set_xticks(range(len(x_data)))
+    ax.set_xticklabels(x_data)
+
     # 自动调整X轴刻度
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))  # 保持X轴为整数
     ax.grid(True, linestyle='--', alpha=0.7)
-    ax.legend(labels=labels, loc='upper center', ncol=len(labels), bbox_to_anchor=(0.5, 1.0), fontsize=14)
+    # if len(labels) < 3:
+    #     ax.legend(labels=labels, loc=legend_loc, ncol=len(labels), bbox_to_anchor=(0.5, 1.0), fontsize=14)
+    # else:
+    ax.legend(labels=labels, loc=legend_loc, ncol=1, fontsize=10)
     plt.tight_layout(rect=(0, 0, 1, 0.95))  # 预留顶部空间以适应图例
 
     # 保存图片
