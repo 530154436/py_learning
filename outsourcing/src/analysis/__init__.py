@@ -15,6 +15,13 @@ class GrowthPattern(object):
     czfhx: str = "成长放缓型"
 
 
+class GrowthPatternV2(object):
+    qmylx: str = "全面引领型"
+    zljjx: str = "质量聚焦型"
+    pttzx: str = "平台调整型"
+    gmqdx: str = "规模驱动型"
+
+
 RESEARCH_TYPE_MAPPING = {
     "0": "工程技术",
     "1": "基础科学",
