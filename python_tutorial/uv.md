@@ -86,6 +86,9 @@ uv tree
 
 # 导出为 requirements.txt
 uv export > requirements.txt
+
+# 导出为 uv.lock
+uv lock
 ```
 + 第三方包卸载
 ```shell
