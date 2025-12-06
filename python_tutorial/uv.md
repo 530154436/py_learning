@@ -41,9 +41,8 @@ cmd > uv self version
 7. 完成配置：点击 OK 保存，PyCharm 将自动加载 `uv` 管理的依赖包列表
 ```
 
-### 2、常用命令
-
-+ 初始化项目、虚拟环境
+### 2、常用操作
+#### 2.1 初始化、虚拟环境、构建和发布
 ```shell
 # 管理 Python 版本
 uv python list  
@@ -58,31 +57,13 @@ uv python list
 uv venv --python 3.12 .venv
 .venv\Scripts\activate
 uv python pin 3.12
-```
 
-+ 第三方包安装、查看
-```shell
-# 1、编辑 pyproject.toml，添加需要安装的包
-...
-dependencies = [
-    "httpx>=0.28.1",
-    "langchain>=1.0.0",
-    "langgraph>=1.0.0",
-]
-...
-# 2、同步环境（安装所有第三方包）
-uv sync           # 仅主依赖
-uv sync --active  # 若已激活其他虚拟环境（如 E:\PythonEnvs\myenv），需加`--active`：
+# 清理缓存
+uv cache clean
 
-
-# 添加依赖（自动更新 pyproject.toml 和 uv.lock）
-uv add requests
-
-# 查看第三方包
-uv pip list
-
-# 查看依赖树
-uv tree
+# 构建与发布
+uv build
+uv publish
 
 # 导出为 requirements.txt
 uv export > requirements.txt
@@ -90,25 +71,85 @@ uv export > requirements.txt
 # 导出为 uv.lock
 uv lock
 ```
-+ 第三方包卸载
-```shell
-# 1、编辑 pyproject.toml，清空依赖列表
-...
-dependencies = [] # ← 清空主依赖
-...
-# 2、同步环境（卸载所有第三方包）
-uv sync --active
-```
-+ 其他
-```shell
-# 清理缓存
-uv cache clean
 
-# 构建与发布
-uv build
-uv publish
+#### 2.2 管理依赖
+项目的依赖在几个字段中定义：
++ project.dependencies：已发布的依赖项。
++ project.optional-dependencies：已发布的可选依赖项或“附加项”。
++ dependency-groups：用于开发的本地依赖项。 
++ tool.uv.sources：开发期间依赖项的备用源。
+```toml
+# pyproject.toml
+[project]
+name = "llm-application"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28.1",
+]
+
+# 索引
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
+
+# 工作区成员
+[tool.uv.workspace]
+members = [
+    "project-llmtoolkits",
+]
+[tool.uv.sources]
+llmtoolkits = { workspace = true, editable = true }
+
+# 开发依赖组
+[dependency-groups]
+dev = [
+    "gradio>=6.0.2",
+    # 可编辑依赖
+    "llmtoolkits",
+]
+```
+添加、删除、查看依赖项
+```shell
+# 添加依赖后，将在 project.dependencies 字段中添加一个条目
+uv add httpx
+
+# 删除依赖
+uv remove httpx
+
+# 查看依赖
+uv pip list
+
+# 查看依赖树
+uv tree
+```
+添加开发依赖组
+```shell
+# 开发依赖项是仅限本地的，在发布到 PyPI 或其他索引时，不会包含在项目需求中。因此，开发依赖项不包含在 [project] 表中。
+uv add --dev gradio
+```
+添加工作区成员（可编辑依赖）
+```shell
+uv add --dev --editable ./project-llmtoolkits/
+```
+环境是自动同步的，但也可以使用 `uv sync` 显式同步
+```shell
+# 同步环境（安装所有第三方包）
+uv sync --active           # 若已激活其他虚拟环境（如 E:\PythonEnvs\myenv），需加`--active`：
+# 同步开发依赖组
+uv sync --active --dev     # 安装 dev 组
+uv sync --active --no-dev  # 排除 dev 组
+```
+当清空`project.dependencies `后同步，则可以删除所有依赖
+```shell
+# pyproject.toml
+[project]
+dependencies = [] # ← 清空主依赖
+
+# 同步环境（卸载所有第三方包）
+uv sync --active
 ```
 
 ## 参考引用
 [1] [新一代Python管理UV完全使用指南](https://zhuanlan.zhihu.com/p/1897568987136640818)<br>
 [2] [uv官网](https://docs.astral.sh/uv/getting-started/installation/)<br>
+[3] [uv中文文档-管理依赖](https://uv.oaix.tech/concepts/projects/dependencies/#_16)<br>
