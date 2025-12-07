@@ -17,7 +17,7 @@
 
 
 ### 1、下载安装
-+ Windows 10
+#### Windows 10
 ```shell
 # 下载并安装uv
 powershell -ExecutionPolicy ByPass -c {$env:UV_INSTALL_DIR = "E:\DevSoftware\uv";irm https://astral.sh/uv/install.ps1 | iex}
@@ -30,7 +30,18 @@ $env:Path = "E:\DevSoftware\uv;$env:Path"   (powershell)
 cmd > uv self version
 ```
 
-+ PyCharm2025.2.2 配置uv [Configure a uv environment](https://www.jetbrains.com/help/pycharm/uv.html)
+#### macOS和Linux
+```
+# https://github.com/astral-sh/uv/releases
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.local/bin/env
+
+$ uv -V
+uv 0.9.16 (a63e5b62e 2025-12-06)
+```
+
+#### PyCharm2025.2.2 配置uv 
+> [Configure a uv environment](https://www.jetbrains.com/help/pycharm/uv.html)
 ```
 1. 打开 Settings / Preferences，路径：`File → Settings`（Windows/Linux）或 `PyCharm → Settings`（macOS）
 2. 导航到 Python Interpreter 设置，在左侧菜单中展开：Python → Interpreter

@@ -2,7 +2,7 @@
 
 ## 下载安装
 
-+ Windows <br>
+### Windows
   [npm](https://nodejs.org/zh-cn/download)： Node.js 默认的包管理器。<br>
   [pnpm](https://pnpm.io/zh/installation)：管理 Node.js 项目的依赖。
 ```shell
@@ -33,4 +33,20 @@ t.com/fwlink/?LinkID=135170 中的 about_Execution_Policies。
 => 以管理员身份打开 PowerShell，并设置执行策略为 RemoteSigned（推荐）
 ```shell
 Set-ExecutionPolicy RemoteSigned
+```
+
+### macOS和Linux
+https://nodejs.org/zh-cn/download
+```
+# 下载并安装 nvm：
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+
+# 下载并安装 Node.js：
+nvm install 24
+
+# 验证 Node.js 版本：
+node -v # Should print "v24.11.1".
+
+# 验证 npm 版本：
+npm -v # Should print "11.6.2".
 ```
